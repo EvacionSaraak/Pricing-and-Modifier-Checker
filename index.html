@@ -306,8 +306,13 @@
                 const response = await fetch('default-prices.json');
                 if (response.ok) {
                     const data = await response.json();
-                    priceList = data;
-                    showStatus('Default prices loaded successfully', 'success');
+                    // Validate JSON structure
+                    if (data && typeof data === 'object') {
+                        priceList = data;
+                        showStatus('Default prices loaded successfully', 'success');
+                    } else {
+                        console.error('Invalid JSON structure');
+                    }
                 }
             } catch (error) {
                 console.log('No default prices file found');
@@ -548,7 +553,7 @@
             // No match found
             return {
                 status: 'Mismatch',
-                expectedPrice: basePrice.thiqa * modifiers[0].value,
+                expectedPrice: basePrice.thiqa * (modifiers.length > 0 ? modifiers[0].value : 1.0),
                 matchedModifier: null
             };
         }
