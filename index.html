@@ -362,7 +362,8 @@
             
             // Populate from priceList object
             for (const [code, prices] of Object.entries(priceList)) {
-                if (code === 'README') continue; // Skip the README entry
+                // Skip non-price entries (check if it has the expected price structure)
+                if (!prices || typeof prices !== 'object' || !('thiqa' in prices || 'highEnd' in prices)) continue;
                 addPriceRowWithData(code, prices.name || '', prices.thiqa || 0, prices.highEnd || 0, prices.midRange || 0, prices.lowEnd || 0, prices.basic || 0);
             }
             
@@ -403,7 +404,16 @@
         
         // Update priceList object from table data
         function updatePriceListFromTable() {
-            priceList = {};
+            // Preserve non-table entries (like README or other metadata)
+            const preservedEntries = {};
+            for (const [code, prices] of Object.entries(priceList)) {
+                if (!prices || typeof prices !== 'object' || !('thiqa' in prices || 'highEnd' in prices)) {
+                    preservedEntries[code] = prices;
+                }
+            }
+            
+            // Clear and rebuild from table
+            priceList = { ...preservedEntries };
             const tbody = document.getElementById('pricelistTableBody');
             const rows = tbody.querySelectorAll('tr');
             
