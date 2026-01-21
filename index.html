@@ -175,13 +175,42 @@
                         
                         <!-- Pricelist Tab -->
                         <div class="tab-pane fade" id="pricelist-pane" role="tabpanel">
-                            <h5>Upload Price List</h5>
-                            <div class="mb-3">
-                                <label for="pricelistFile" class="form-label">Upload XLSX Price List</label>
-                                <input type="file" class="form-control" id="pricelistFile" accept=".xlsx,.xls">
-                                <small class="text-muted">Upload an Excel file with columns: Code, Name, Thiqa, High-end, Mid-range, Low-End, Basic</small>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Price List</h5>
+                                <div>
+                                    <button class="btn btn-sm btn-success me-2" onclick="addPriceRow()">
+                                        <i class="bi bi-plus-circle"></i> Add Row
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="document.getElementById('pricelistFile').click()">
+                                        <i class="bi bi-upload"></i> Upload XLSX
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadDefaultPricesToTable()">
+                                        <i class="bi bi-download"></i> Load Default
+                                    </button>
+                                </div>
                             </div>
+                            <input type="file" id="pricelistFile" accept=".xlsx,.xls" style="display:none;">
                             <div id="pricelistStatus" class="alert alert-info" style="display:none;"></div>
+                            
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-bordered table-sm" id="pricelistTable">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th style="width: 150px;">Code</th>
+                                            <th style="width: 200px;">Name</th>
+                                            <th style="width: 100px;">Thiqa</th>
+                                            <th style="width: 100px;">High-end</th>
+                                            <th style="width: 100px;">Mid-range</th>
+                                            <th style="width: 100px;">Low-End</th>
+                                            <th style="width: 100px;">Basic</th>
+                                            <th style="width: 60px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pricelistTableBody">
+                                        <!-- Rows will be added dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     
@@ -309,6 +338,7 @@
                     // Validate JSON structure
                     if (data && typeof data === 'object') {
                         priceList = data;
+                        loadDefaultPricesToTable(); // Populate the table
                         showStatus('Default prices loaded successfully', 'success');
                     } else {
                         console.error('Invalid JSON structure');
@@ -322,6 +352,75 @@
         // Load default prices (button click)
         function loadDefaultPrices() {
             loadDefaultPricesFromJSON();
+        }
+        
+        // Load default prices into the editable table
+        function loadDefaultPricesToTable() {
+            // Clear existing rows
+            const tbody = document.getElementById('pricelistTableBody');
+            tbody.innerHTML = '';
+            
+            // Populate from priceList object
+            for (const [code, prices] of Object.entries(priceList)) {
+                if (code === 'README') continue; // Skip the README entry
+                addPriceRowWithData(code, prices.name || '', prices.thiqa || 0, prices.highEnd || 0, prices.midRange || 0, prices.lowEnd || 0, prices.basic || 0);
+            }
+            
+            showPricelistStatus('Default prices loaded into table', 'success');
+        }
+        
+        // Add a new empty price row
+        function addPriceRow() {
+            addPriceRowWithData('', '', 0, 0, 0, 0, 0);
+        }
+        
+        // Add a price row with data
+        function addPriceRowWithData(code, name, thiqa, highEnd, midRange, lowEnd, basic) {
+            const tbody = document.getElementById('pricelistTableBody');
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td><input type="text" class="form-control form-control-sm" value="${code}" onchange="updatePriceListFromTable()"></td>
+                <td><input type="text" class="form-control form-control-sm" value="${name}" onchange="updatePriceListFromTable()"></td>
+                <td><input type="number" class="form-control form-control-sm" value="${thiqa}" step="0.01" onchange="updatePriceListFromTable()"></td>
+                <td><input type="number" class="form-control form-control-sm" value="${highEnd}" step="0.01" onchange="updatePriceListFromTable()"></td>
+                <td><input type="number" class="form-control form-control-sm" value="${midRange}" step="0.01" onchange="updatePriceListFromTable()"></td>
+                <td><input type="number" class="form-control form-control-sm" value="${lowEnd}" step="0.01" onchange="updatePriceListFromTable()"></td>
+                <td><input type="number" class="form-control form-control-sm" value="${basic}" step="0.01" onchange="updatePriceListFromTable()"></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removePriceRow(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+        }
+        
+        // Remove a price row
+        function removePriceRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+            updatePriceListFromTable();
+        }
+        
+        // Update priceList object from table data
+        function updatePriceListFromTable() {
+            priceList = {};
+            const tbody = document.getElementById('pricelistTableBody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const code = inputs[0].value.trim();
+                if (code) {
+                    priceList[code] = {
+                        name: inputs[1].value.trim(),
+                        thiqa: parseFloat(inputs[2].value) || 0,
+                        highEnd: parseFloat(inputs[3].value) || 0,
+                        midRange: parseFloat(inputs[4].value) || 0,
+                        lowEnd: parseFloat(inputs[5].value) || 0,
+                        basic: parseFloat(inputs[6].value) || 0
+                    };
+                }
+            });
         }
         
         // Handle price list file upload
@@ -350,6 +449,9 @@
                                 };
                             }
                         });
+                        
+                        // Populate the table with the loaded data
+                        loadDefaultPricesToTable();
                         
                         showPricelistStatus('Price list uploaded successfully! ' + Object.keys(priceList).length + ' items loaded.', 'success');
                     } catch (error) {
