@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Checker - Daman Thiqa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .main-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .left-sidebar {
+            width: 300px;
+            background-color: #fff;
+            border-right: 2px solid #dee2e6;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .right-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .modifier-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .modifier-item label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .modifier-item input {
+            width: 100%;
+        }
+        
+        .input-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .results-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .nav-tabs .nav-link {
+            cursor: pointer;
+        }
+        
+        .tab-content {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        
+        .header-bar {
+            background-color: #0d6efd;
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-process {
+            font-size: 1.1rem;
+            padding: 10px 30px;
+        }
+        
+        #resultsTable {
+            display: none;
+        }
+        
+        .match-success {
+            background-color: #d1e7dd;
+        }
+        
+        .match-warning {
+            background-color: #fff3cd;
+        }
+        
+        .match-danger {
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header-bar">
+            <h1 class="h3 mb-0"><i class="bi bi-calculator"></i> Pricing Checker - Daman Thiqa</h1>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content-wrapper">
+            <!-- Left Sidebar - Modifiers -->
+            <div class="left-sidebar">
+                <h5 class="mb-3">Price Modifiers</h5>
+                <div id="modifiersList">
+                    <!-- Modifiers will be dynamically populated here -->
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-3" onclick="addModifier()">
+                    <i class="bi bi-plus-circle"></i> Add Modifier
+                </button>
+            </div>
+            
+            <!-- Right Content Area -->
+            <div class="right-content">
+                <!-- Input Section -->
+                <div class="input-section">
+                    <ul class="nav nav-tabs" id="inputTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="modifiers-tab" data-bs-toggle="tab" data-bs-target="#modifiers-pane" type="button" role="tab">
+                                Modifiers
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pricelist-tab" data-bs-toggle="tab" data-bs-target="#pricelist-pane" type="button" role="tab">
+                                Price List
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="inputTabsContent">
+                        <!-- Modifiers Tab -->
+                        <div class="tab-pane fade show active" id="modifiers-pane" role="tabpanel">
+                            <h5>Default Modifiers</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="defaultModifier" class="form-label">Default Modifier Value</label>
+                                    <input type="number" class="form-control" id="defaultModifier" value="1.0" step="0.1">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Load Default Prices</label>
+                                    <button class="btn btn-outline-secondary w-100" onclick="loadDefaultPrices()">
+                                        <i class="bi bi-download"></i> Load Default Prices
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pricelist Tab -->
+                        <div class="tab-pane fade" id="pricelist-pane" role="tabpanel">
+                            <h5>Upload Price List</h5>
+                            <div class="mb-3">
+                                <label for="pricelistFile" class="form-label">Upload XLSX Price List</label>
+                                <input type="file" class="form-control" id="pricelistFile" accept=".xlsx,.xls">
+                                <small class="text-muted">Upload an Excel file with columns: Code, Name, Thiqa, High-end, Mid-range, Low-End, Basic</small>
+                            </div>
+                            <div id="pricelistStatus" class="alert alert-info" style="display:none;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- XML Input -->
+                    <div class="mt-4">
+                        <h5>Upload XML Claims</h5>
+                        <div class="mb-3">
+                            <label for="xmlFile" class="form-label">XML File</label>
+                            <input type="file" class="form-control" id="xmlFile" accept=".xml">
+                        </div>
+                    </div>
+                    
+                    <!-- Process Button -->
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary btn-process" onclick="processXML()">
+                            <i class="bi bi-gear-fill"></i> Process Claims
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Results Section -->
+                <div class="results-section" id="resultsTable">
+                    <h5 class="mb-3">Processing Results</h5>
+                    <div id="summarySection" class="mb-3"></div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="resultsTableData">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>CLAIM ID</th>
+                                    <th>TYPE</th>
+                                    <th>CODE</th>
+                                    <th>NET</th>
+                                    <th>QUANTITY</th>
+                                    <th>Clinician</th>
+                                    <th>Expected Price</th>
+                                    <th>Modifier</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                                <!-- Results will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Global variables
+        let priceList = {};
+        let modifiers = [];
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeModifiers();
+            loadDefaultPricesFromJSON();
+        });
+        
+        // Initialize default modifiers
+        function initializeModifiers() {
+            modifiers = [
+                { name: 'Thiqa', value: 1.0 },
+                { name: 'High-end', value: 1.3 },
+                { name: 'Mid-range', value: 1.2 },
+                { name: 'Low-End', value: 1.1 },
+                { name: 'Basic', value: 1.0 }
+            ];
+            renderModifiers();
+        }
+        
+        // Render modifiers list
+        function renderModifiers() {
+            const container = document.getElementById('modifiersList');
+            container.innerHTML = '';
+            
+            modifiers.forEach((modifier, index) => {
+                const modifierDiv = document.createElement('div');
+                modifierDiv.className = 'modifier-item';
+                modifierDiv.innerHTML = `
+                    <label>${modifier.name}</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" value="${modifier.value}" 
+                               step="0.1" onchange="updateModifier(${index}, this.value)">
+                        <button class="btn btn-outline-danger" onclick="removeModifier(${index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(modifierDiv);
+            });
+        }
+        
+        // Update modifier value
+        function updateModifier(index, value) {
+            modifiers[index].value = parseFloat(value);
+        }
+        
+        // Add new modifier
+        function addModifier() {
+            const name = prompt('Enter modifier name:');
+            if (name) {
+                modifiers.push({ name: name, value: 1.0 });
+                renderModifiers();
+            }
+        }
+        
+        // Remove modifier
+        function removeModifier(index) {
+            if (confirm('Are you sure you want to remove this modifier?')) {
+                modifiers.splice(index, 1);
+                renderModifiers();
+            }
+        }
+        
+        // Load default prices from JSON
+        async function loadDefaultPricesFromJSON() {
+            try {
+                const response = await fetch('default-prices.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    priceList = data;
+                    showStatus('Default prices loaded successfully', 'success');
+                }
+            } catch (error) {
+                console.log('No default prices file found');
+            }
+        }
+        
+        // Load default prices (button click)
+        function loadDefaultPrices() {
+            loadDefaultPricesFromJSON();
+        }
+        
+        // Handle price list file upload
+        document.getElementById('pricelistFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        // Convert to price list format
+                        priceList = {};
+                        jsonData.forEach(row => {
+                            if (row.Code) {
+                                priceList[row.Code] = {
+                                    name: row.Name || '',
+                                    thiqa: parseFloat(row.Thiqa) || 0,
+                                    highEnd: parseFloat(row['High-end']) || 0,
+                                    midRange: parseFloat(row['Mid-range']) || 0,
+                                    lowEnd: parseFloat(row['Low-End']) || 0,
+                                    basic: parseFloat(row.Basic) || 0
+                                };
+                            }
+                        });
+                        
+                        showPricelistStatus('Price list uploaded successfully! ' + Object.keys(priceList).length + ' items loaded.', 'success');
+                    } catch (error) {
+                        showPricelistStatus('Error reading Excel file: ' + error.message, 'danger');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+        
+        // Show pricelist status message
+        function showPricelistStatus(message, type) {
+            const statusDiv = document.getElementById('pricelistStatus');
+            statusDiv.className = `alert alert-${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Show general status message
+        function showStatus(message, type) {
+            // You can implement a toast or alert here
+            console.log(message);
+        }
+        
+        // Process XML file
+        function processXML() {
+            const xmlFile = document.getElementById('xmlFile').files[0];
+            
+            if (!xmlFile) {
+                alert('Please select an XML file');
+                return;
+            }
+            
+            if (Object.keys(priceList).length === 0) {
+                alert('Please upload a price list first');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const xmlText = e.target.result;
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                    
+                    // Check for parsing errors
+                    const parserError = xmlDoc.querySelector('parsererror');
+                    if (parserError) {
+                        alert('Error parsing XML file');
+                        return;
+                    }
+                    
+                    // Parse claims from XML
+                    const claims = parseXMLClaims(xmlDoc);
+                    
+                    // Process and display results
+                    displayResults(claims);
+                } catch (error) {
+                    alert('Error processing XML: ' + error.message);
+                }
+            };
+            reader.readAsText(xmlFile);
+        }
+        
+        // Parse claims from XML document
+        function parseXMLClaims(xmlDoc) {
+            const claims = [];
+            
+            // This is a generic parser - adjust based on actual XML structure
+            const claimElements = xmlDoc.querySelectorAll('Claim, claim');
+            
+            claimElements.forEach(claimEl => {
+                const claimId = claimEl.querySelector('ClaimID, claimId, ID, id')?.textContent || 'N/A';
+                const type = claimEl.querySelector('Type, type, ClaimType')?.textContent || 'N/A';
+                
+                // Get services/items within the claim
+                const services = claimEl.querySelectorAll('Service, service, Item, item, Activity, activity');
+                
+                services.forEach(service => {
+                    const claim = {
+                        claimId: claimId,
+                        type: type,
+                        code: service.querySelector('Code, code, ServiceCode, ActivityCode')?.textContent || 'N/A',
+                        net: parseFloat(service.querySelector('Net, net, NetAmount, Amount')?.textContent) || 0,
+                        quantity: parseInt(service.querySelector('Quantity, quantity, Qty')?.textContent) || 1,
+                        clinician: service.querySelector('Clinician, clinician, Doctor, Provider')?.textContent || 'N/A'
+                    };
+                    claims.push(claim);
+                });
+            });
+            
+            return claims;
+        }
+        
+        // Display results in table
+        function displayResults(claims) {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            let matchCount = 0;
+            let mismatchCount = 0;
+            let notFoundCount = 0;
+            
+            claims.forEach(claim => {
+                const result = checkPriceMatch(claim);
+                const row = tbody.insertRow();
+                
+                // Apply row styling based on match status
+                if (result.status === 'Match') {
+                    row.className = 'match-success';
+                    matchCount++;
+                } else if (result.status === 'Not Found') {
+                    row.className = 'match-warning';
+                    notFoundCount++;
+                } else {
+                    row.className = 'match-danger';
+                    mismatchCount++;
+                }
+                
+                row.innerHTML = `
+                    <td>${claim.claimId}</td>
+                    <td>${claim.type}</td>
+                    <td>${claim.code}</td>
+                    <td>${claim.net.toFixed(2)}</td>
+                    <td>${claim.quantity}</td>
+                    <td>${claim.clinician}</td>
+                    <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
+                    <td>${result.matchedModifier || 'N/A'}</td>
+                    <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : 'bg-danger'}">${result.status}</span></td>
+                `;
+            });
+            
+            // Show summary
+            const summaryDiv = document.getElementById('summarySection');
+            summaryDiv.innerHTML = `
+                <div class="alert alert-info">
+                    <strong>Summary:</strong> 
+                    Total Claims: ${claims.length} | 
+                    <span class="text-success">Matches: ${matchCount}</span> | 
+                    <span class="text-danger">Mismatches: ${mismatchCount}</span> | 
+                    <span class="text-warning">Not Found: ${notFoundCount}</span>
+                </div>
+            `;
+            
+            // Show results table
+            document.getElementById('resultsTable').style.display = 'block';
+        }
+        
+        // Check if price matches with any modifier
+        function checkPriceMatch(claim) {
+            const code = claim.code;
+            const actualPrice = claim.net;
+            
+            // Check if code exists in price list
+            if (!priceList[code]) {
+                return {
+                    status: 'Not Found',
+                    expectedPrice: null,
+                    matchedModifier: null
+                };
+            }
+            
+            const basePrice = priceList[code];
+            
+            // Try to match with each modifier
+            for (let modifier of modifiers) {
+                let priceToCheck = 0;
+                
+                // Determine which price field to use based on modifier name
+                const modName = modifier.name.toLowerCase();
+                if (modName.includes('thiqa')) {
+                    priceToCheck = basePrice.thiqa;
+                } else if (modName.includes('high')) {
+                    priceToCheck = basePrice.highEnd;
+                } else if (modName.includes('mid')) {
+                    priceToCheck = basePrice.midRange;
+                } else if (modName.includes('low')) {
+                    priceToCheck = basePrice.lowEnd;
+                } else if (modName.includes('basic')) {
+                    priceToCheck = basePrice.basic;
+                } else {
+                    // Use thiqa as default
+                    priceToCheck = basePrice.thiqa;
+                }
+                
+                const expectedPrice = priceToCheck * modifier.value;
+                
+                // Allow small tolerance for floating point comparison
+                if (Math.abs(actualPrice - expectedPrice) < 0.01) {
+                    return {
+                        status: 'Match',
+                        expectedPrice: expectedPrice,
+                        matchedModifier: `${modifier.name} (${modifier.value})`
+                    };
+                }
+            }
+            
+            // No match found
+            return {
+                status: 'Mismatch',
+                expectedPrice: basePrice.thiqa * modifiers[0].value,
+                matchedModifier: null
+            };
+        }
+    </script>
+</body>
+</html>

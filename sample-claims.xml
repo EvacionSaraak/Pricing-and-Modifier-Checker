@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sample XML format for testing the Pricing Checker -->
+<!-- This file demonstrates the expected XML structure -->
+<Claims>
+    <Claim>
+        <ClaimID>CLAIM-001</ClaimID>
+        <Type>Inpatient</Type>
+        <Service>
+            <Code>EXAMPLE_CODE_001</Code>
+            <Net>130.00</Net>
+            <Quantity>1</Quantity>
+            <Clinician>Dr. Smith</Clinician>
+        </Service>
+        <Service>
+            <Code>EXAMPLE_CODE_002</Code>
+            <Net>117.00</Net>
+            <Quantity>1</Quantity>
+            <Clinician>Dr. Johnson</Clinician>
+        </Service>
+    </Claim>
+    <Claim>
+        <ClaimID>CLAIM-002</ClaimID>
+        <Type>Outpatient</Type>
+        <Service>
+            <Code>EXAMPLE_CODE_001</Code>
+            <Net>100.00</Net>
+            <Quantity>2</Quantity>
+            <Clinician>Dr. Brown</Clinician>
+        </Service>
+    </Claim>
+</Claims>
