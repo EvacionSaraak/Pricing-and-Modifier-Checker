@@ -684,11 +684,11 @@ function checkPriceMatch(claim) {
         }
     }
     
-    // No match found
+    // No match found - provide reason
     return {
         status: 'Mismatch',
         expectedPrice: basePrice * codeModifiers.thiqa * quantity,
-        matchedModifier: null,
+        matchedModifier: 'No modifier matched',
         category: codeType
     };
 }
