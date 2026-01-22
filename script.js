@@ -419,9 +419,15 @@ function parseXMLClaims(xmlDoc) {
         const activities = claimEl.querySelectorAll('Activity, activity, Service, service, Item, item');
         
         activities.forEach(activity => {
+            // Get type from activity first, fallback to claim level
+            const activityType = activity.querySelector('Type')?.textContent || 
+                               activity.querySelector('type')?.textContent ||
+                               activity.querySelector('Encounter Type')?.textContent ||
+                               encounterType;
+            
             const claim = {
                 claimId: claimId,
-                type: encounterType,
+                type: activityType,
                 code: activity.querySelector('Code')?.textContent || 
                       activity.querySelector('code')?.textContent || 
                       activity.querySelector('ServiceCode')?.textContent || 
@@ -488,14 +494,15 @@ function renderResults() {
         
         row.innerHTML = `
             <td>${claim.claimId}</td>
+            <td>${claim.clinician}</td>
             <td>${claim.type}</td>
             <td>${claim.code}</td>
             <td>${result.category || 'N/A'}</td>
-            <td>${claim.net.toFixed(2)}</td>
-            <td>${claim.quantity}</td>
-            <td>${claim.clinician}</td>
-            <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
             <td>${result.matchedModifier || 'N/A'}</td>
+            <td>${claim.quantity}</td>
+            <td>${claim.net.toFixed(2)}</td>
+            <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
+            <td>${claim.quantity > 1 ? '<span class="badge bg-info">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
             <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : result.status === 'Error' ? 'bg-dark' : 'bg-danger'}">${result.status}</span></td>
         `;
     });

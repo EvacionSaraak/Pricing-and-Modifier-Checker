@@ -174,34 +174,37 @@ body {
 /* Row and column highlighting on hover */
 #resultsTableData {
     position: relative;
+    overflow: visible;
 }
 
 #resultsTableData tbody tr {
     position: relative;
 }
 
+/* Row highlighting - lighter blue tint */
 #resultsTableData tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.15) !important;
+    background-color: rgba(33, 150, 243, 0.12) !important;
     cursor: pointer;
 }
 
-#resultsTableData tbody tr:hover td {
-    position: relative;
-}
-
-/* Column highlighting - use pseudo-element overlay */
 #resultsTableData tbody tr td {
     position: relative;
 }
 
-#resultsTableData tbody tr td:hover::after {
+/* Column highlighting - stronger yellow/amber tint on the specific cell */
+#resultsTableData tbody tr td:hover {
+    background-color: rgba(255, 193, 7, 0.25) !important;
+}
+
+/* Create column highlight effect using a pseudo-element that extends vertically */
+#resultsTableData tbody tr td:hover::before {
     content: '';
-    position: fixed;
+    position: absolute;
     left: 0;
     right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: rgba(13, 110, 253, 0.1);
+    top: -1000px;
+    bottom: -1000px;
+    background-color: rgba(255, 193, 7, 0.08);
     z-index: -1;
     pointer-events: none;
 }
