@@ -132,20 +132,37 @@ body {
     display: flex !important;
 }
 
-.match-success {
-    /* Background color removed to allow uniform hover highlighting */
+/* Status badge styling - applied to spans in Status column only */
+.status-badge.match-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    padding: 0.25em 0.6em;
+    border-radius: 0.25rem;
+    font-weight: 500;
 }
 
-.match-warning {
-    /* Background color removed to allow uniform hover highlighting */
+.status-badge.match-warning {
+    background-color: #fff3cd;
+    color: #997404;
+    padding: 0.25em 0.6em;
+    border-radius: 0.25rem;
+    font-weight: 500;
 }
 
-.match-danger {
-    /* Background color removed to allow uniform hover highlighting */
+.status-badge.match-danger {
+    background-color: #f8d7da;
+    color: #842029;
+    padding: 0.25em 0.6em;
+    border-radius: 0.25rem;
+    font-weight: 500;
 }
 
-.match-error {
-    /* Background color removed to allow uniform hover highlighting */
+.status-badge.match-error {
+    background-color: #e2e3e5;
+    color: #41464b;
+    padding: 0.25em 0.6em;
+    border-radius: 0.25rem;
+    font-weight: 500;
 }
 
 .modifiers-table {

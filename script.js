@@ -531,18 +531,14 @@ function renderResults() {
         const result = checkPriceMatch(claim);
         const row = tbody.insertRow();
         
-        // Apply row styling based on match status
+        // Don't apply row styling - only style the status span
         if (result.status === 'Match') {
-            row.className = 'match-success';
             matchCount++;
         } else if (result.status === 'Not Found') {
-            row.className = 'match-warning';
             notFoundCount++;
         } else if (result.status === 'Error') {
-            row.className = 'match-error';
             errorCount++;
         } else {
-            row.className = 'match-danger';
             mismatchCount++;
         }
         
@@ -556,7 +552,7 @@ function renderResults() {
             <td>${claim.quantity}</td>
             <td>${claim.net.toFixed(2)}</td>
             <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
-            <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : result.status === 'Error' ? 'bg-dark' : 'bg-danger'}">${result.status}</span></td>
+            <td><span class="badge status-badge ${result.status === 'Match' ? 'match-success' : result.status === 'Not Found' ? 'match-warning' : result.status === 'Error' ? 'match-error' : 'match-danger'}">${result.status}</span></td>
         `;
     });
     
