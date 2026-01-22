@@ -133,19 +133,19 @@ body {
 }
 
 .match-success {
-    background-color: #d1e7dd;
+    /* Background color removed to allow uniform hover highlighting */
 }
 
 .match-warning {
-    background-color: #fff3cd;
+    /* Background color removed to allow uniform hover highlighting */
 }
 
 .match-danger {
-    background-color: #f8d7da;
+    /* Background color removed to allow uniform hover highlighting */
 }
 
 .match-error {
-    background-color: #e2e3e5;
+    /* Background color removed to allow uniform hover highlighting */
 }
 
 .modifiers-table {
