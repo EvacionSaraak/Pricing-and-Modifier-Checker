@@ -181,20 +181,20 @@ body {
     position: relative;
 }
 
-/* Row highlighting - light blue tint for entire row */
-/* Apply to all cells in the highlighted row for uniform color */
+/* Row and column highlighting - same uniform color for both */
+/* Apply to all cells in the highlighted row */
 #resultsTableData tbody tr.row-highlighted td {
-    background-color: rgba(33, 150, 243, 0.2) !important;
+    background-color: rgba(33, 150, 243, 0.25) !important;
 }
 
-/* Column highlighting - yellow/amber tint for entire column */
+/* Apply to all cells in the highlighted column */
 #resultsTableData tbody tr td.column-highlighted {
-    background-color: rgba(255, 193, 7, 0.2) !important;
+    background-color: rgba(33, 150, 243, 0.25) !important;
 }
 
-/* Hovered cell gets both row and column highlighting combined */
+/* Hovered cell gets stronger highlight */
 #resultsTableData tbody tr.row-highlighted td.cell-hovered.column-highlighted {
-    background-color: rgba(255, 152, 0, 0.35) !important;
+    background-color: rgba(33, 150, 243, 0.4) !important;
     cursor: pointer;
 }
 
