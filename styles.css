@@ -45,6 +45,7 @@ body {
     overflow: hidden;
     padding: 0;
     border: none;
+    margin: 0; /* Remove any margins */
 }
 
 .tab-pane {

@@ -341,9 +341,14 @@ function updateModifier(index, field, value) {
 function updateModifierDisplayValues() {
     modifiers.forEach(modifier => {
         const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace('&', '');
-        document.getElementById(`${type}-thiqa-value`).textContent = modifier.thiqa;
-        document.getElementById(`${type}-lowend-value`).textContent = modifier.lowEnd;
-        document.getElementById(`${type}-basic-value`).textContent = modifier.basic;
+        const thiqaEl = document.getElementById(`${type}-thiqa-value`);
+        const lowEndEl = document.getElementById(`${type}-lowend-value`);
+        const basicEl = document.getElementById(`${type}-basic-value`);
+        
+        // Only update if elements exist (they don't exist in current UI)
+        if (thiqaEl) thiqaEl.textContent = modifier.thiqa;
+        if (lowEndEl) lowEndEl.textContent = modifier.lowEnd;
+        if (basicEl) basicEl.textContent = modifier.basic;
     });
 }
 
