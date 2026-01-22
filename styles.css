@@ -174,7 +174,6 @@ body {
 /* Row and column highlighting on hover */
 #resultsTableData {
     position: relative;
-    overflow: visible;
 }
 
 #resultsTableData tbody tr {
@@ -202,8 +201,8 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    top: -1000px;
-    bottom: -1000px;
+    top: -100vh;
+    bottom: -100vh;
     background-color: rgba(255, 193, 7, 0.08);
     z-index: -1;
     pointer-events: none;
