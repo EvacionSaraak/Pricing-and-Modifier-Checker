@@ -6,7 +6,13 @@ let priceList = {}; // Will hold price data from Prices.xlsx
 let modifiers = [];
 let allPrices = []; // Array to hold all price records for searching
 let processedClaims = []; // Store processed claims for filtering
-let showOnlyInvalids = false; // Filter state
+let showOnlyInvalids = false; // Filter state (deprecated, use statusFilters)
+let statusFilters = {
+    Match: true,
+    Mismatch: true,
+    'Not Found': true,
+    Error: true
+}; // New filter state for selective status filtering
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -449,12 +455,10 @@ function displayResults(claims) {
 
 // Render results (with optional filtering)
 function renderResults() {
-    const claims = showOnlyInvalids ? 
-        processedClaims.filter(claim => {
-            const result = checkPriceMatch(claim);
-            return result.status !== 'Match';
-        }) : 
-        processedClaims;
+    const claims = processedClaims.filter(claim => {
+        const result = checkPriceMatch(claim);
+        return statusFilters[result.status] === true;
+    });
     
     const tbody = document.getElementById('resultsBody');
     tbody.innerHTML = '';
@@ -503,6 +507,8 @@ function renderResults() {
     const allNotFoundCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Not Found').length;
     const allErrorCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Error').length;
     
+    const isFiltered = claims.length !== processedClaims.length;
+    
     const summaryDiv = document.getElementById('summarySection');
     summaryDiv.innerHTML = `
         <div class="alert alert-info">
@@ -511,7 +517,7 @@ function renderResults() {
             <span class="text-success">Matches: ${allMatchCount}</span> | 
             <span class="text-danger">Mismatches: ${allMismatchCount}</span> | 
             <span class="text-warning">Not Found: ${allNotFoundCount}</span>${allErrorCount > 0 ? ' | <span class="text-dark">Errors: ' + allErrorCount + '</span>' : ''}
-            ${showOnlyInvalids ? ' <em>(Showing filtered results: ' + claims.length + ' items)</em>' : ''}
+            ${isFiltered ? ' <em>(Showing filtered results: ' + claims.length + ' items)</em>' : ''}
         </div>
     `;
     
@@ -519,11 +525,42 @@ function renderResults() {
     document.getElementById('resultsTable').style.display = 'block';
 }
 
-// Toggle invalid filter
-function toggleInvalidFilter() {
-    showOnlyInvalids = !showOnlyInvalids;
-    const buttonText = document.getElementById('filterButtonText');
-    buttonText.textContent = showOnlyInvalids ? 'All' : 'Invalids';
+// Update status filter
+function updateStatusFilter(status, checked) {
+    statusFilters[status] = checked;
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
+}
+
+// Select all filters
+function selectAllFilters() {
+    statusFilters.Match = true;
+    statusFilters.Mismatch = true;
+    statusFilters['Not Found'] = true;
+    statusFilters.Error = true;
+    
+    document.getElementById('filterMatch').checked = true;
+    document.getElementById('filterMismatch').checked = true;
+    document.getElementById('filterNotFound').checked = true;
+    document.getElementById('filterError').checked = true;
+    
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
+}
+
+// Clear all filters
+function clearAllFilters() {
+    statusFilters.Match = false;
+    statusFilters.Mismatch = false;
+    statusFilters['Not Found'] = false;
+    statusFilters.Error = false;
+    
+    document.getElementById('filterMatch').checked = false;
+    document.getElementById('filterMismatch').checked = false;
+    document.getElementById('filterNotFound').checked = false;
+    document.getElementById('filterError').checked = false;
     
     if (processedClaims.length > 0) {
         renderResults();

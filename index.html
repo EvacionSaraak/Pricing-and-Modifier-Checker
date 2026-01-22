@@ -36,8 +36,8 @@
                         </button>
                     </div>
                     <div class="col-4">
-                        <button class="btn btn-outline-secondary w-100" onclick="toggleInvalidFilter()">
-                            <i class="bi bi-funnel"></i> <span id="filterButtonText">Invalids</span>
+                        <button class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#filterModal">
+                            <i class="bi bi-funnel"></i> Filter
                         </button>
                     </div>
                     <div class="col-4">
@@ -138,6 +138,50 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Filter -->
+    <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel"><i class="bi bi-funnel"></i> Filter Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Select which statuses to display:</p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterMatch" checked onchange="updateStatusFilter('Match', this.checked)">
+                        <label class="form-check-label" for="filterMatch">
+                            <span class="badge bg-success">Match</span> Show matching claims
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterMismatch" checked onchange="updateStatusFilter('Mismatch', this.checked)">
+                        <label class="form-check-label" for="filterMismatch">
+                            <span class="badge bg-danger">Mismatch</span> Show mismatching claims
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterNotFound" checked onchange="updateStatusFilter('Not Found', this.checked)">
+                        <label class="form-check-label" for="filterNotFound">
+                            <span class="badge bg-warning">Not Found</span> Show codes not in price list
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterError" checked onchange="updateStatusFilter('Error', this.checked)">
+                        <label class="form-check-label" for="filterError">
+                            <span class="badge bg-dark">Error</span> Show invalid codes (00000)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="selectAllFilters()">Select All</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearAllFilters()">Clear All</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Apply</button>
                 </div>
             </div>
         </div>

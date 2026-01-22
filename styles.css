@@ -170,3 +170,39 @@ body {
     padding: 3px 5px;
     font-size: 0.85rem;
 }
+
+/* Row and column highlighting on hover */
+#resultsTableData {
+    position: relative;
+}
+
+#resultsTableData tbody tr {
+    position: relative;
+}
+
+#resultsTableData tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.15) !important;
+    cursor: pointer;
+}
+
+#resultsTableData tbody tr:hover td {
+    position: relative;
+}
+
+/* Column highlighting - use pseudo-element overlay */
+#resultsTableData tbody tr td:hover::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -5000px;
+    bottom: -5000px;
+    background-color: rgba(13, 110, 253, 0.1);
+    z-index: -1;
+    pointer-events: none;
+}
+
+#resultsTableData tbody tr td {
+    position: relative;
+}
+
