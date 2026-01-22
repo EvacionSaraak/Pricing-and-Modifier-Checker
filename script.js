@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeModifiers();
     loadPricesXLSX(); // Load Prices.xlsx on startup
     initializeResizeHandle(); // Initialize sidebar resizing
+    initializeTableHoverHighlight(); // Initialize row/column highlighting
 });
 
 // Initialize resize handle for sidebar
@@ -53,6 +54,59 @@ function initializeResizeHandle() {
             isResizing = false;
             document.body.style.cursor = '';
         }
+    });
+}
+
+// Initialize table hover highlighting for row and column
+function initializeTableHoverHighlight() {
+    // Use event delegation on the table
+    const table = document.getElementById('resultsTableData');
+    if (!table) return;
+    
+    table.addEventListener('mouseover', function(e) {
+        const cell = e.target.closest('td');
+        if (!cell) return;
+        
+        const row = cell.parentElement;
+        const columnIndex = Array.from(row.children).indexOf(cell);
+        
+        // Highlight the entire row
+        row.classList.add('row-highlighted');
+        
+        // Highlight all cells in the same column
+        const allRows = table.querySelectorAll('tbody tr');
+        allRows.forEach(r => {
+            const targetCell = r.children[columnIndex];
+            if (targetCell) {
+                targetCell.classList.add('column-highlighted');
+            }
+        });
+        
+        // Add special class to the hovered cell
+        cell.classList.add('cell-hovered');
+    });
+    
+    table.addEventListener('mouseout', function(e) {
+        const cell = e.target.closest('td');
+        if (!cell) return;
+        
+        const row = cell.parentElement;
+        const columnIndex = Array.from(row.children).indexOf(cell);
+        
+        // Remove row highlighting
+        row.classList.remove('row-highlighted');
+        
+        // Remove column highlighting
+        const allRows = table.querySelectorAll('tbody tr');
+        allRows.forEach(r => {
+            const targetCell = r.children[columnIndex];
+            if (targetCell) {
+                targetCell.classList.remove('column-highlighted');
+            }
+        });
+        
+        // Remove hovered cell class
+        cell.classList.remove('cell-hovered');
     });
 }
 

@@ -172,39 +172,28 @@ body {
 }
 
 /* Row and column highlighting on hover */
-#resultsTableData {
-    position: relative;
-}
-
 #resultsTableData tbody tr {
-    position: relative;
-}
-
-/* Row highlighting - lighter blue tint */
-#resultsTableData tbody tr:hover {
-    background-color: rgba(33, 150, 243, 0.12) !important;
-    cursor: pointer;
+    transition: background-color 0.1s ease;
 }
 
 #resultsTableData tbody tr td {
+    transition: background-color 0.1s ease;
     position: relative;
 }
 
-/* Column highlighting - stronger yellow/amber tint on the specific cell */
-#resultsTableData tbody tr td:hover {
-    background-color: rgba(255, 193, 7, 0.25) !important;
+/* Row highlighting - light blue tint for entire row */
+#resultsTableData tbody tr.row-highlighted {
+    background-color: rgba(33, 150, 243, 0.12) !important;
 }
 
-/* Create column highlight effect using a pseudo-element that extends vertically */
-#resultsTableData tbody tr td:hover::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: -100vh;
-    bottom: -100vh;
-    background-color: rgba(255, 193, 7, 0.08);
-    z-index: -1;
-    pointer-events: none;
+/* Column highlighting - yellow/amber tint for entire column */
+#resultsTableData tbody tr td.column-highlighted {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+/* Hovered cell gets both row and column highlighting combined */
+#resultsTableData tbody tr.row-highlighted td.cell-hovered.column-highlighted {
+    background-color: rgba(255, 152, 0, 0.3) !important;
+    cursor: pointer;
 }
 
