@@ -6,13 +6,12 @@ let priceList = {}; // Will hold price data from Prices.xlsx
 let modifiers = [];
 let allPrices = []; // Array to hold all price records for searching
 let processedClaims = []; // Store processed claims for filtering
-let showOnlyInvalids = false; // Filter state (deprecated, use statusFilters)
 let statusFilters = {
     Match: true,
     Mismatch: true,
     'Not Found': true,
     Error: true
-}; // New filter state for selective status filtering
+}; // Filter state for selective status filtering
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
