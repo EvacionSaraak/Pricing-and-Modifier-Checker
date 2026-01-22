@@ -281,7 +281,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Handle price list file upload (if element exists in future)
+// Handle price list file upload - safely check if element exists
+// Note: This element is not currently in the HTML but code is defensive
 const pricelistFileInput = document.getElementById('pricelistFile');
 if (pricelistFileInput) {
     pricelistFileInput.addEventListener('change', function(e) {
