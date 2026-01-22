@@ -502,7 +502,6 @@ function renderResults() {
             <td>${claim.quantity}</td>
             <td>${claim.net.toFixed(2)}</td>
             <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
-            <td>${claim.quantity > 1 ? '<span class="badge bg-info">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
             <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : result.status === 'Error' ? 'bg-dark' : 'bg-danger'}">${result.status}</span></td>
         `;
     });
