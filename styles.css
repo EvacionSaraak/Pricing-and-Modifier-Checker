@@ -1,0 +1,132 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.main-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.left-sidebar {
+    width: 300px;
+    background-color: #fff;
+    border-right: 2px solid #dee2e6;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.right-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.modifier-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.modifier-item label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.modifier-item input {
+    width: 100%;
+}
+
+.input-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.results-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.nav-tabs .nav-link {
+    cursor: pointer;
+}
+
+.tab-content {
+    padding: 20px;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+}
+
+.header-bar {
+    background-color: #0d6efd;
+    color: white;
+    padding: 15px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-process {
+    font-size: 1.1rem;
+    padding: 10px 30px;
+}
+
+#resultsTable {
+    display: none;
+}
+
+.match-success {
+    background-color: #d1e7dd;
+}
+
+.match-warning {
+    background-color: #fff3cd;
+}
+
+.match-danger {
+    background-color: #f8d7da;
+}
+
+.modifiers-table {
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+.modifiers-table th {
+    background-color: #f8f9fa;
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #dee2e6;
+}
+
+.modifiers-table td {
+    padding: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.modifiers-table input {
+    width: 60px;
+    padding: 3px 5px;
+    font-size: 0.85rem;
+}

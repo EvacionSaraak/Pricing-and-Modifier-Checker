@@ -6,140 +6,7 @@
     <title>Pricing Checker - Daman Thiqa</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-        }
-        
-        .main-container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .content-wrapper {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-        
-        .left-sidebar {
-            width: 300px;
-            background-color: #fff;
-            border-right: 2px solid #dee2e6;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        
-        .right-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        
-        .modifier-item {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .modifier-item label {
-            font-weight: 500;
-            margin-bottom: 5px;
-            display: block;
-        }
-        
-        .modifier-item input {
-            width: 100%;
-        }
-        
-        .input-section {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .results-section {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .table-responsive {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        
-        .nav-tabs .nav-link {
-            cursor: pointer;
-        }
-        
-        .tab-content {
-            padding: 20px;
-            border: 1px solid #dee2e6;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
-        }
-        
-        .header-bar {
-            background-color: #0d6efd;
-            color: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .btn-process {
-            font-size: 1.1rem;
-            padding: 10px 30px;
-        }
-        
-        #resultsTable {
-            display: none;
-        }
-        
-        .match-success {
-            background-color: #d1e7dd;
-        }
-        
-        .match-warning {
-            background-color: #fff3cd;
-        }
-        
-        .match-danger {
-            background-color: #f8d7da;
-        }
-        
-        .modifiers-table {
-            width: 100%;
-            font-size: 0.9rem;
-        }
-        
-        .modifiers-table th {
-            background-color: #f8f9fa;
-            padding: 8px;
-            text-align: left;
-            border: 1px solid #dee2e6;
-        }
-        
-        .modifiers-table td {
-            padding: 5px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .modifiers-table input {
-            width: 60px;
-            padding: 3px 5px;
-            font-size: 0.85rem;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="main-container">
@@ -613,27 +480,44 @@
         }
         
         // Parse claims from XML document
+        // Parse claims from XML document
         function parseXMLClaims(xmlDoc) {
             const claims = [];
             
-            // This is a generic parser - adjust based on actual XML structure
+            // Handle both generic and HAAD-specific XML formats
             const claimElements = xmlDoc.querySelectorAll('Claim, claim');
             
             claimElements.forEach(claimEl => {
-                const claimId = claimEl.querySelector('ClaimID, claimId, ID, id')?.textContent || 'N/A';
-                const type = claimEl.querySelector('Type, type, ClaimType')?.textContent || 'N/A';
+                const claimId = claimEl.querySelector('ID')?.textContent || 
+                               claimEl.querySelector('ClaimID')?.textContent || 
+                               claimEl.querySelector('claimId')?.textContent || 'N/A';
                 
-                // Get services/items within the claim
-                const services = claimEl.querySelectorAll('Service, service, Item, item, Activity, activity');
+                // Get encounter type if available
+                const encounterType = claimEl.querySelector('Encounter Type')?.textContent || 'N/A';
                 
-                services.forEach(service => {
+                // Get activities/services within the claim
+                const activities = claimEl.querySelectorAll('Activity, activity, Service, service, Item, item');
+                
+                activities.forEach(activity => {
                     const claim = {
                         claimId: claimId,
-                        type: type,
-                        code: service.querySelector('Code, code, ServiceCode, ActivityCode')?.textContent || 'N/A',
-                        net: parseFloat(service.querySelector('Net, net, NetAmount, Amount')?.textContent) || 0,
-                        quantity: parseInt(service.querySelector('Quantity, quantity, Qty')?.textContent) || 1,
-                        clinician: service.querySelector('Clinician, clinician, Doctor, Provider')?.textContent || 'N/A'
+                        type: encounterType,
+                        code: activity.querySelector('Code')?.textContent || 
+                              activity.querySelector('code')?.textContent || 
+                              activity.querySelector('ServiceCode')?.textContent || 
+                              activity.querySelector('ActivityCode')?.textContent || 'N/A',
+                        net: parseFloat(activity.querySelector('Net')?.textContent || 
+                                       activity.querySelector('net')?.textContent || 
+                                       activity.querySelector('NetAmount')?.textContent || 
+                                       activity.querySelector('Amount')?.textContent || '0'),
+                        quantity: parseInt(activity.querySelector('Quantity')?.textContent || 
+                                          activity.querySelector('quantity')?.textContent || 
+                                          activity.querySelector('Qty')?.textContent || '1'),
+                        clinician: activity.querySelector('Clinician')?.textContent || 
+                                  activity.querySelector('clinician')?.textContent || 
+                                  activity.querySelector('Doctor')?.textContent || 
+                                  activity.querySelector('Provider')?.textContent || 
+                                  activity.querySelector('OrderingClinician')?.textContent || 'N/A'
                     };
                     claims.push(claim);
                 });
