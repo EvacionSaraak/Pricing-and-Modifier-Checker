@@ -150,12 +150,7 @@ body {
     cursor: pointer;
 }
 
-.tab-content {
-    padding: 20px;
-    border: 1px solid #dee2e6;
-    border-top: none;
-    border-radius: 0 0 5px 5px;
-}
+/* Removed duplicate .tab-content rule - using flexbox version above instead */
 
 .header-bar {
     background-color: #0d6efd;
