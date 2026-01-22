@@ -50,9 +50,9 @@ function validateModifiers(xmlRecords, eligibilityData) {
             validationResult.eligibility = eligibilityMatch;
         }
         
-        // Set final remarks
+        // Set final remarks as string
         if (validationResult.isValid) {
-            validationResult.remarks = ['Valid'];
+            validationResult.remarks = 'Valid';
         } else {
             validationResult.remarks = validationResult.remarks.join('; ');
         }

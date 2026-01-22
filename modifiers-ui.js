@@ -67,7 +67,8 @@ function displayModifierResults(results) {
     const tbody = document.getElementById('modifierResultsBody');
     tbody.innerHTML = '';
     
-    for (let record of results) {
+    for (let i = 0; i < results.length; i++) {
+        const record = results[i];
         const row = document.createElement('tr');
         row.className = record.isValid ? 'valid-row' : 'invalid-row';
         
@@ -82,7 +83,7 @@ function displayModifierResults(results) {
             <td>${escapeHtml(record.payerID)}</td>
             <td>${escapeHtml(record.remarks)}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="viewEligibilityDetails(${results.indexOf(record)})">
+                <button class="btn btn-sm btn-primary" onclick="viewEligibilityDetails(${i})">
                     <i class="bi bi-eye"></i> View
                 </button>
             </td>

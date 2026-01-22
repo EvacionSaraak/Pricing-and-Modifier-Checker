@@ -70,18 +70,3 @@ function findColumnIndex(headers, possibleNames) {
     }
     return -1;
 }
-
-// Helper to parse Excel date serial number
-function parseExcelDate(excelDate) {
-    if (typeof excelDate === 'string') {
-        return excelDate;
-    }
-    
-    if (typeof excelDate === 'number') {
-        // Excel date serial number (days since 1900-01-01)
-        const date = new Date((excelDate - 25569) * 86400 * 1000);
-        return date;
-    }
-    
-    return excelDate;
-}
