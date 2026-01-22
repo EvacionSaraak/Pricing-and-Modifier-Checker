@@ -16,7 +16,7 @@ body {
 }
 
 .left-sidebar {
-    width: 300px;
+    width: 500px;
     background-color: #fff;
     border-right: 2px solid #dee2e6;
     overflow-y: auto;

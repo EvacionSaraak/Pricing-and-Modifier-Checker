@@ -17,107 +17,66 @@
         
         <!-- Main Content -->
         <div class="content-wrapper">
-            <!-- Left Sidebar - Modifiers -->
+            <!-- Left Sidebar - Modifiers, Search, and Upload -->
             <div class="left-sidebar">
                 <h5 class="mb-3">Price Modifiers</h5>
-                <div id="modifiersList">
+                <div id="modifiersList" class="mb-4">
                     <!-- Modifiers table will be dynamically populated here -->
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Price List Search Section -->
+                <h5 class="mb-3">Price List Search</h5>
+                <div class="mb-3">
+                    <label for="priceSearch" class="form-label">Search by Code or Description</label>
+                    <input type="text" class="form-control" id="priceSearch" placeholder="Type to search..." oninput="searchPrices()">
+                </div>
+                <div id="pricelistStatus" class="alert alert-info" style="display:none;"></div>
+                
+                <hr class="my-4">
+                
+                <!-- XML Upload Section -->
+                <h5 class="mb-3">Upload XML Claims</h5>
+                <div class="mb-3">
+                    <label for="xmlFile" class="form-label">XML File</label>
+                    <input type="file" class="form-control" id="xmlFile" accept=".xml">
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="processXML()">
+                        <i class="bi bi-gear-fill"></i> Process Claims
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="toggleInvalidFilter()">
+                        <i class="bi bi-funnel"></i> <span id="filterButtonText">Show Only Invalids</span>
+                    </button>
                 </div>
             </div>
             
             <!-- Right Content Area -->
             <div class="right-content">
-                <!-- Input Section -->
+                <!-- Price Search Results Section -->
                 <div class="input-section">
-                    <ul class="nav nav-tabs" id="inputTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="modifiers-tab" data-bs-toggle="tab" data-bs-target="#modifiers-pane" type="button" role="tab">
-                                Modifiers
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="pricelist-tab" data-bs-toggle="tab" data-bs-target="#pricelist-pane" type="button" role="tab">
-                                Price List
-                            </button>
-                        </li>
-                    </ul>
-                    
-                    <div class="tab-content" id="inputTabsContent">
-                        <!-- Modifiers Tab -->
-                        <div class="tab-pane fade show active" id="modifiers-pane" role="tabpanel">
-                            <h5>Default Modifiers</h5>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="defaultModifier" class="form-label">Default Modifier Value</label>
-                                    <input type="number" class="form-control" id="defaultModifier" value="1.0" step="0.1">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Load Default Prices</label>
-                                    <button class="btn btn-outline-secondary w-100" onclick="loadDefaultPrices()">
-                                        <i class="bi bi-download"></i> Load Default Prices
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Pricelist Tab -->
-                        <div class="tab-pane fade" id="pricelist-pane" role="tabpanel">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0">Price List Search</h5>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('pricelistFile').click()">
-                                        <i class="bi bi-upload"></i> Upload New Prices
-                                    </button>
-                                </div>
-                            </div>
-                            <input type="file" id="pricelistFile" accept=".xlsx,.xls" style="display:none;">
-                            <div id="pricelistStatus" class="alert alert-info" style="display:none;"></div>
-                            
-                            <!-- Search Input -->
-                            <div class="mb-3">
-                                <label for="priceSearch" class="form-label">Search by Code or Description</label>
-                                <input type="text" class="form-control" id="priceSearch" placeholder="Type to search..." oninput="searchPrices()">
-                            </div>
-                            
-                            <!-- Search Results Table -->
-                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                                <table class="table table-striped table-hover table-sm" id="priceSearchResults">
-                                    <thead class="table-light sticky-top">
-                                        <tr>
-                                            <th style="width: 120px;">Code</th>
-                                            <th style="width: 300px;">Description</th>
-                                            <th style="width: 100px;">Base Price</th>
-                                            <th style="width: 100px;">Thiqa</th>
-                                            <th style="width: 100px;">Low-End</th>
-                                            <th style="width: 100px;">Basic</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="priceSearchBody">
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted">
-                                                Type in the search box to find prices...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- XML Input -->
-                    <div class="mt-4">
-                        <h5>Upload XML Claims</h5>
-                        <div class="mb-3">
-                            <label for="xmlFile" class="form-label">XML File</label>
-                            <input type="file" class="form-control" id="xmlFile" accept=".xml">
-                        </div>
-                    </div>
-                    
-                    <!-- Process Button -->
-                    <div class="text-center mt-4">
-                        <button class="btn btn-primary btn-process" onclick="processXML()">
-                            <i class="bi bi-gear-fill"></i> Process Claims
-                        </button>
+                    <h5 class="mb-3">Price Search Results</h5>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped table-hover table-sm" id="priceSearchResults">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width: 120px;">Code</th>
+                                    <th style="width: 300px;">Description</th>
+                                    <th style="width: 100px;">Base Price</th>
+                                    <th style="width: 100px;">Thiqa</th>
+                                    <th style="width: 100px;">Low-End</th>
+                                    <th style="width: 100px;">Basic</th>
+                                </tr>
+                            </thead>
+                            <tbody id="priceSearchBody">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        Type in the search box to find prices...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
@@ -160,6 +119,8 @@
         let priceList = {}; // Will hold price data from Prices.xlsx
         let modifiers = [];
         let allPrices = []; // Array to hold all price records for searching
+        let processedClaims = []; // Store processed claims for filtering
+        let showOnlyInvalids = false; // Filter state
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -527,7 +488,21 @@
         }
         
         // Display results in table
+        // Display results in table
         function displayResults(claims) {
+            processedClaims = claims; // Store for filtering
+            renderResults();
+        }
+        
+        // Render results (with optional filtering)
+        function renderResults() {
+            const claims = showOnlyInvalids ? 
+                processedClaims.filter(claim => {
+                    const result = checkPriceMatch(claim);
+                    return result.status !== 'Match';
+                }) : 
+                processedClaims;
+            
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
             
@@ -564,20 +539,36 @@
                 `;
             });
             
-            // Show summary
+            // Show summary (always show total from all claims)
+            const allMatchCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Match').length;
+            const allMismatchCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Mismatch').length;
+            const allNotFoundCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Not Found').length;
+            
             const summaryDiv = document.getElementById('summarySection');
             summaryDiv.innerHTML = `
                 <div class="alert alert-info">
                     <strong>Summary:</strong> 
-                    Total Claims: ${claims.length} | 
-                    <span class="text-success">Matches: ${matchCount}</span> | 
-                    <span class="text-danger">Mismatches: ${mismatchCount}</span> | 
-                    <span class="text-warning">Not Found: ${notFoundCount}</span>
+                    Total Claims: ${processedClaims.length} | 
+                    <span class="text-success">Matches: ${allMatchCount}</span> | 
+                    <span class="text-danger">Mismatches: ${allMismatchCount}</span> | 
+                    <span class="text-warning">Not Found: ${allNotFoundCount}</span>
+                    ${showOnlyInvalids ? ' <em>(Showing filtered results: ' + claims.length + ' items)</em>' : ''}
                 </div>
             `;
             
             // Show results table
             document.getElementById('resultsTable').style.display = 'block';
+        }
+        
+        // Toggle invalid filter
+        function toggleInvalidFilter() {
+            showOnlyInvalids = !showOnlyInvalids;
+            const buttonText = document.getElementById('filterButtonText');
+            buttonText.textContent = showOnlyInvalids ? 'Show All Results' : 'Show Only Invalids';
+            
+            if (processedClaims.length > 0) {
+                renderResults();
+            }
         }
         
         // Check if price matches with any modifier
