@@ -12,6 +12,7 @@ let statusFilters = {
     'Not Found': true,
     Error: true
 }; // Filter state for selective status filtering
+let activeModifiers = {}; // Store active modifier selections per category
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -19,6 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadPricesXLSX(); // Load Prices.xlsx on startup
     initializeResizeHandle(); // Initialize sidebar resizing
     initializeTableHoverHighlight(); // Initialize row/column highlighting
+    loadModifierSettings(); // Load saved modifier settings
+    updateModifierDisplayValues(); // Update displayed values in modifiers tab
 });
 
 // Initialize resize handle for sidebar
@@ -331,6 +334,84 @@ function renderModifiers() {
 function updateModifier(index, field, value) {
     modifiers[index][field] = parseFloat(value);
     searchPrices(); // Refresh search results with new modifier values
+    updateModifierDisplayValues(); // Update values in modifiers tab
+}
+
+// Update modifier display values in the Modifiers tab
+function updateModifierDisplayValues() {
+    modifiers.forEach(modifier => {
+        const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace('&', '');
+        document.getElementById(`${type}-thiqa-value`).textContent = modifier.thiqa;
+        document.getElementById(`${type}-lowend-value`).textContent = modifier.lowEnd;
+        document.getElementById(`${type}-basic-value`).textContent = modifier.basic;
+    });
+}
+
+// Load modifier settings from localStorage
+function loadModifierSettings() {
+    const saved = localStorage.getItem('activeModifiers');
+    if (saved) {
+        activeModifiers = JSON.parse(saved);
+        
+        // Apply saved settings to radio buttons
+        for (const [category, modifierType] of Object.entries(activeModifiers)) {
+            const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-${modifierType}`;
+            const radio = document.getElementById(radioId);
+            if (radio) {
+                radio.checked = true;
+            }
+        }
+    } else {
+        // Set defaults
+        setDefaultModifierSettings();
+    }
+}
+
+// Set default modifier settings
+function setDefaultModifierSettings() {
+    activeModifiers = {
+        'Medical': 'thiqa',
+        'Radiology': 'lowEnd',
+        'Laboratory': 'lowEnd',
+        'Physiotherapy': 'lowEnd',
+        'OP E&M': 'thiqa'
+    };
+}
+
+// Save modifier settings to localStorage
+function saveModifierSettings() {
+    const categories = ['Medical', 'Radiology', 'Laboratory', 'Physiotherapy', 'OP E&M'];
+    
+    categories.forEach(category => {
+        const radioName = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-modifier`;
+        const selected = document.querySelector(`input[name="${radioName}"]:checked`);
+        if (selected) {
+            activeModifiers[category] = selected.value;
+        }
+    });
+    
+    localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    
+    alert('Modifier settings saved successfully!');
+    
+    // Re-render results if claims are already processed
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
+}
+
+// Reset modifier settings to defaults
+function resetModifierSettings() {
+    setDefaultModifierSettings();
+    
+    // Update radio buttons to reflect defaults
+    document.getElementById('medical-thiqa').checked = true;
+    document.getElementById('radiology-lowend').checked = true;
+    document.getElementById('laboratory-lowend').checked = true;
+    document.getElementById('physiotherapy-lowend').checked = true;
+    document.getElementById('opem-thiqa').checked = true;
+    
+    alert('Modifier settings reset to defaults!');
 }
 
 // Escape HTML to prevent XSS
@@ -666,15 +747,13 @@ function checkPriceMatch(claim) {
         };
     }
     
-    // Try to match with each modifier type (thiqa, lowEnd, basic)
-    const modifierTypes = [
-        { name: 'Thiqa', value: codeModifiers.thiqa },
-        { name: 'Low-End', value: codeModifiers.lowEnd },
-        { name: 'Basic', value: codeModifiers.basic }
-    ];
+    // Check if there's an active modifier selection for this code type
+    const activeModifierType = activeModifiers[codeType];
     
-    for (let modType of modifierTypes) {
-        const expectedPricePerUnit = basePrice * modType.value;
+    if (activeModifierType) {
+        // Use only the active modifier for validation
+        const modifierValue = codeModifiers[activeModifierType];
+        const expectedPricePerUnit = basePrice * modifierValue;
         const expectedPriceTotal = expectedPricePerUnit * quantity;
         
         // Allow small tolerance for floating point comparison
@@ -682,22 +761,65 @@ function checkPriceMatch(claim) {
             return {
                 status: 'Match',
                 expectedPrice: expectedPriceTotal,
-                matchedModifier: `${modType.name} (${modType.value})`,
+                matchedModifier: `${getModifierName(activeModifierType)} (${modifierValue})`,
                 category: codeType,
                 reason: '-'
             };
+        } else {
+            // Mismatch - show expected price for active modifier
+            const modifierName = getModifierName(activeModifierType);
+            return {
+                status: 'Mismatch',
+                expectedPrice: expectedPriceTotal,
+                matchedModifier: 'No match',
+                category: codeType,
+                reason: `Expected ${expectedPriceTotal.toFixed(2)} for ${modifierName} (${modifierValue})`
+            };
         }
+    } else {
+        // No active modifier set - check all three (backward compatibility)
+        const modifierTypes = [
+            { name: 'Thiqa', value: codeModifiers.thiqa },
+            { name: 'Low-End', value: codeModifiers.lowEnd },
+            { name: 'Basic', value: codeModifiers.basic }
+        ];
+        
+        for (let modType of modifierTypes) {
+            const expectedPricePerUnit = basePrice * modType.value;
+            const expectedPriceTotal = expectedPricePerUnit * quantity;
+            
+            // Allow small tolerance for floating point comparison
+            if (Math.abs(actualPrice - expectedPriceTotal) < 0.01) {
+                return {
+                    status: 'Match',
+                    expectedPrice: expectedPriceTotal,
+                    matchedModifier: `${modType.name} (${modType.value})`,
+                    category: codeType,
+                    reason: '-'
+                };
+            }
+        }
+        
+        // No match found - provide reason
+        const availableModifiers = `Thiqa=${codeModifiers.thiqa}, Low-End=${codeModifiers.lowEnd}, Basic=${codeModifiers.basic}`;
+        return {
+            status: 'Mismatch',
+            expectedPrice: basePrice * codeModifiers.thiqa * quantity,
+            matchedModifier: 'No modifier matched',
+            category: codeType,
+            reason: `Price doesn't match any modifier (${availableModifiers})`
+        };
     }
-    
-    // No match found - provide reason
-    const availableModifiers = `Thiqa=${codeModifiers.thiqa}, Low-End=${codeModifiers.lowEnd}, Basic=${codeModifiers.basic}`;
-    return {
-        status: 'Mismatch',
-        expectedPrice: basePrice * codeModifiers.thiqa * quantity,
-        matchedModifier: 'No modifier matched',
-        category: codeType,
-        reason: `Price doesn't match any modifier (${availableModifiers})`
+}
+
+// Helper function to get modifier display name
+function getModifierName(modifierType) {
+    const names = {
+        'thiqa': 'Thiqa',
+        'lowEnd': 'Low-End',
+        'basic': 'Basic'
     };
+    return names[modifierType] || modifierType;
 }
 
 // Export results to Excel

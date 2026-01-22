@@ -16,8 +16,25 @@
             <h1 class="h3 mb-0"><i class="bi bi-calculator"></i> Pricing Checker - Daman Thiqa</h1>
         </div>
         
-        <!-- Main Content -->
-        <div class="content-wrapper">
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pricing-tab" data-bs-toggle="tab" data-bs-target="#pricing" type="button" role="tab">
+                    <i class="bi bi-calculator"></i> Pricing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="modifiers-tab" data-bs-toggle="tab" data-bs-target="#modifiers" type="button" role="tab">
+                    <i class="bi bi-sliders"></i> Modifiers
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="mainTabContent">
+            <!-- Pricing Tab -->
+            <div class="tab-pane fade show active" id="pricing" role="tabpanel">
+                <div class="content-wrapper">
             <!-- Left Sidebar - Upload, Modifiers, and Search -->
             <div class="left-sidebar" id="leftSidebar">
                 <!-- Resize Handle -->
@@ -118,6 +135,148 @@
                     </div>
                 </div>
             </div>
+            </div>
+            <!-- End Pricing Tab -->
+            
+            <!-- Modifiers Tab -->
+            <div class="tab-pane fade" id="modifiers" role="tabpanel">
+                <div class="modifiers-content">
+                    <h4 class="mb-3">Active Modifier Selection</h4>
+                    <p class="text-muted mb-4">Select which modifier to use for price validation in each category</p>
+                    
+                    <div class="modifier-selection-grid">
+                        <div class="modifier-category-card">
+                            <h5>Medical</h5>
+                            <div class="modifier-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="medical-modifier" id="medical-thiqa" value="thiqa" checked>
+                                    <label class="form-check-label" for="medical-thiqa">
+                                        Thiqa (<span id="medical-thiqa-value">1.3</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="medical-modifier" id="medical-lowend" value="lowEnd">
+                                    <label class="form-check-label" for="medical-lowend">
+                                        Low-End (<span id="medical-lowend-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="medical-modifier" id="medical-basic" value="basic">
+                                    <label class="form-check-label" for="medical-basic">
+                                        Basic (<span id="medical-basic-value">1.0</span>)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modifier-category-card">
+                            <h5>Radiology</h5>
+                            <div class="modifier-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="radiology-modifier" id="radiology-thiqa" value="thiqa">
+                                    <label class="form-check-label" for="radiology-thiqa">
+                                        Thiqa (<span id="radiology-thiqa-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="radiology-modifier" id="radiology-lowend" value="lowEnd" checked>
+                                    <label class="form-check-label" for="radiology-lowend">
+                                        Low-End (<span id="radiology-lowend-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="radiology-modifier" id="radiology-basic" value="basic">
+                                    <label class="form-check-label" for="radiology-basic">
+                                        Basic (<span id="radiology-basic-value">1.0</span>)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modifier-category-card">
+                            <h5>Laboratory</h5>
+                            <div class="modifier-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laboratory-modifier" id="laboratory-thiqa" value="thiqa">
+                                    <label class="form-check-label" for="laboratory-thiqa">
+                                        Thiqa (<span id="laboratory-thiqa-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laboratory-modifier" id="laboratory-lowend" value="lowEnd" checked>
+                                    <label class="form-check-label" for="laboratory-lowend">
+                                        Low-End (<span id="laboratory-lowend-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="laboratory-modifier" id="laboratory-basic" value="basic">
+                                    <label class="form-check-label" for="laboratory-basic">
+                                        Basic (<span id="laboratory-basic-value">1.0</span>)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modifier-category-card">
+                            <h5>Physiotherapy</h5>
+                            <div class="modifier-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="physiotherapy-modifier" id="physiotherapy-thiqa" value="thiqa">
+                                    <label class="form-check-label" for="physiotherapy-thiqa">
+                                        Thiqa (<span id="physiotherapy-thiqa-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="physiotherapy-modifier" id="physiotherapy-lowend" value="lowEnd" checked>
+                                    <label class="form-check-label" for="physiotherapy-lowend">
+                                        Low-End (<span id="physiotherapy-lowend-value">1.0</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="physiotherapy-modifier" id="physiotherapy-basic" value="basic">
+                                    <label class="form-check-label" for="physiotherapy-basic">
+                                        Basic (<span id="physiotherapy-basic-value">1.0</span>)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modifier-category-card">
+                            <h5>OP E&M</h5>
+                            <div class="modifier-radio-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="opem-modifier" id="opem-thiqa" value="thiqa" checked>
+                                    <label class="form-check-label" for="opem-thiqa">
+                                        Thiqa (<span id="opem-thiqa-value">1.3</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="opem-modifier" id="opem-lowend" value="lowEnd">
+                                    <label class="form-check-label" for="opem-lowend">
+                                        Low-End (<span id="opem-lowend-value">1.08</span>)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="opem-modifier" id="opem-basic" value="basic">
+                                    <label class="form-check-label" for="opem-basic">
+                                        Basic (<span id="opem-basic-value">1.0</span>)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modifier-actions">
+                        <button class="btn btn-primary" onclick="saveModifierSettings()">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetModifierSettings()">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset to Defaults
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- End Modifiers Tab -->
         </div>
     </div>
     
