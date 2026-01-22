@@ -18,8 +18,28 @@
         
         <!-- Main Content -->
         <div class="content-wrapper">
-            <!-- Left Sidebar - Modifiers, Search, and Upload -->
+            <!-- Left Sidebar - Upload, Modifiers, and Search -->
             <div class="left-sidebar">
+                <!-- XML Upload Section -->
+                <h5 class="mb-3">Upload XML Claims</h5>
+                <div class="mb-3">
+                    <label for="xmlFile" class="form-label">XML File</label>
+                    <input type="file" class="form-control" id="xmlFile" accept=".xml">
+                </div>
+                <div class="d-grid gap-2 mb-4">
+                    <button class="btn btn-primary" onclick="processXML()">
+                        <i class="bi bi-gear-fill"></i> Process Claims
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="toggleInvalidFilter()">
+                        <i class="bi bi-funnel"></i> <span id="filterButtonText">Show Only Invalids</span>
+                    </button>
+                    <button class="btn btn-success" onclick="exportToExcel()" id="exportBtn" style="display:none;">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
+                    </button>
+                </div>
+                
+                <hr class="my-4">
+                
                 <h5 class="mb-3">Price Modifiers</h5>
                 <div id="modifiersList" class="mb-4">
                     <!-- Modifiers table will be dynamically populated here -->
@@ -41,7 +61,7 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 80px;">Code</th>
-                                <th style="width: 200px;">Description</th>
+                                <th style="width: 100px;">Description</th>
                                 <th style="width: 70px;">Base</th>
                                 <th style="width: 70px;">Thiqa</th>
                                 <th style="width: 70px;">Low-End</th>
@@ -56,23 +76,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-                
-                <hr class="my-4">
-                
-                <!-- XML Upload Section -->
-                <h5 class="mb-3">Upload XML Claims</h5>
-                <div class="mb-3">
-                    <label for="xmlFile" class="form-label">XML File</label>
-                    <input type="file" class="form-control" id="xmlFile" accept=".xml">
-                </div>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-primary" onclick="processXML()">
-                        <i class="bi bi-gear-fill"></i> Process Claims
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="toggleInvalidFilter()">
-                        <i class="bi bi-funnel"></i> <span id="filterButtonText">Show Only Invalids</span>
-                    </button>
                 </div>
             </div>
             
@@ -89,6 +92,7 @@
                                     <th>CLAIM ID</th>
                                     <th>TYPE</th>
                                     <th>CODE</th>
+                                    <th>CATEGORY</th>
                                     <th>NET</th>
                                     <th>QUANTITY</th>
                                     <th>Clinician</th>
@@ -106,7 +110,31 @@
             </div>
         </div>
     </div>
-
+    
+    <!-- Modal for Description -->
+    <div class="modal fade" id="descriptionModal" tabindex="-1" aria-labelledby="descriptionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="descriptionModalLabel">Price Description</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Code:</strong> <span id="modalCode"></span></p>
+                    <p><strong>Description:</strong> <span id="modalDescription"></span></p>
+                    <p><strong>Base Price:</strong> <span id="modalBasePrice"></span></p>
+                    <hr>
+                    <h6>Prices with Modifiers:</h6>
+                    <div id="modalModifierPrices"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
@@ -232,12 +260,13 @@
         
         // Search prices
         // Search prices
+        // Search prices
         function searchPrices() {
             const searchTerm = document.getElementById('priceSearch').value.toLowerCase().trim();
             const tbody = document.getElementById('priceSearchBody');
             
             if (!searchTerm) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Type in the search box to find prices...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Type to search...</td></tr>';
                 return;
             }
             
@@ -264,10 +293,13 @@
                 const lowEndPrice = codeModifiers ? (basePrice * codeModifiers.lowEnd).toFixed(2) : 'N/A';
                 const basicPrice = codeModifiers ? (basePrice * codeModifiers.basic).toFixed(2) : 'N/A';
                 
+                // Truncate description for table
+                const shortDesc = item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description;
+                
                 return `
                     <tr>
                         <td>${escapeHtml(item.code)}</td>
-                        <td>${escapeHtml(item.description)}</td>
+                        <td><a href="#" onclick="showDescriptionModal('${escapeHtml(item.code)}', '${escapeHtml(item.description)}', ${basePrice}); return false;" class="text-decoration-none">${escapeHtml(shortDesc)}</a></td>
                         <td>${basePrice.toFixed(2)}</td>
                         <td>${thiqaPrice}</td>
                         <td>${lowEndPrice}</td>
@@ -279,6 +311,34 @@
             if (filtered.length > MAX_SEARCH_RESULTS) {
                 tbody.innerHTML += `<tr><td colspan="6" class="text-center text-muted">Showing ${MAX_SEARCH_RESULTS} of ${filtered.length} results. Refine your search for more specific results.</td></tr>`;
             }
+        }
+        
+        // Show description in modal
+        function showDescriptionModal(code, description, basePrice) {
+            document.getElementById('modalCode').textContent = code;
+            document.getElementById('modalDescription').textContent = description;
+            document.getElementById('modalBasePrice').textContent = basePrice.toFixed(2) + ' AED';
+            
+            // Get modifiers for this code
+            const codeModifiers = getModifiersForCode(code);
+            const modifierPricesDiv = document.getElementById('modalModifierPrices');
+            
+            if (codeModifiers) {
+                const codeType = getCodeType(code);
+                modifierPricesDiv.innerHTML = `
+                    <p><strong>Code Category:</strong> ${codeType}</p>
+                    <ul>
+                        <li><strong>Thiqa (${codeModifiers.thiqa}):</strong> ${(basePrice * codeModifiers.thiqa).toFixed(2)} AED</li>
+                        <li><strong>Low-End (${codeModifiers.lowEnd}):</strong> ${(basePrice * codeModifiers.lowEnd).toFixed(2)} AED</li>
+                        <li><strong>Basic (${codeModifiers.basic}):</strong> ${(basePrice * codeModifiers.basic).toFixed(2)} AED</li>
+                    </ul>
+                `;
+            } else {
+                modifierPricesDiv.innerHTML = '<p><em>No modifier category applicable for this code.</em></p>';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('descriptionModal'));
+            modal.show();
         }
         
         // Update search results when modifiers change
@@ -493,6 +553,7 @@
         }
         
         // Render results (with optional filtering)
+        // Render results (with optional filtering)
         function renderResults() {
             const claims = showOnlyInvalids ? 
                 processedClaims.filter(claim => {
@@ -528,6 +589,7 @@
                     <td>${claim.claimId}</td>
                     <td>${claim.type}</td>
                     <td>${claim.code}</td>
+                    <td>${result.category || 'N/A'}</td>
                     <td>${claim.net.toFixed(2)}</td>
                     <td>${claim.quantity}</td>
                     <td>${claim.clinician}</td>
@@ -554,8 +616,9 @@
                 </div>
             `;
             
-            // Show results table
+            // Show results table and export button
             document.getElementById('resultsTable').style.display = 'block';
+            document.getElementById('exportBtn').style.display = 'block';
         }
         
         // Toggle invalid filter
@@ -573,24 +636,28 @@
         function checkPriceMatch(claim) {
             const code = claim.code;
             const actualPrice = claim.net;
+            const codeType = getCodeType(code);
             
             // Check if code exists in price list and has basePrice
             if (!priceList[code] || !priceList[code].basePrice) {
                 return {
                     status: 'Not Found',
                     expectedPrice: null,
-                    matchedModifier: null
+                    matchedModifier: null,
+                    category: codeType || 'Unknown'
                 };
             }
             
             const basePrice = priceList[code].basePrice;
             const codeModifiers = getModifiersForCode(code);
             
+            // If no modifiers can be applied to this code, treat as valid
             if (!codeModifiers) {
                 return {
-                    status: 'Not Found',
-                    expectedPrice: null,
-                    matchedModifier: 'Unknown code type'
+                    status: 'Match',
+                    expectedPrice: basePrice,
+                    matchedModifier: 'No modifier (default)',
+                    category: 'No Category'
                 };
             }
             
@@ -609,7 +676,8 @@
                     return {
                         status: 'Match',
                         expectedPrice: expectedPrice,
-                        matchedModifier: `${modType.name} (${modType.value})`
+                        matchedModifier: `${modType.name} (${modType.value})`,
+                        category: codeType
                     };
                 }
             }
@@ -618,8 +686,46 @@
             return {
                 status: 'Mismatch',
                 expectedPrice: basePrice * codeModifiers.thiqa,
-                matchedModifier: null
+                matchedModifier: null,
+                category: codeType
             };
+        }
+        
+        // Export results to Excel
+        function exportToExcel() {
+            if (!processedClaims || processedClaims.length === 0) {
+                alert('No processed claims to export');
+                return;
+            }
+            
+            // Prepare data for export
+            const exportData = processedClaims.map(claim => {
+                const result = checkPriceMatch(claim);
+                return {
+                    'Claim ID': claim.claimId,
+                    'Type': claim.type,
+                    'Code': claim.code,
+                    'Category': result.category || 'N/A',
+                    'NET': claim.net,
+                    'Quantity': claim.quantity,
+                    'Clinician': claim.clinician,
+                    'Expected Price': result.expectedPrice !== null ? result.expectedPrice : 'N/A',
+                    'Modifier': result.matchedModifier || 'N/A',
+                    'Status': result.status
+                };
+            });
+            
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Claims Results');
+            
+            // Generate file name with timestamp
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,'-');
+            const filename = `Claims_Results_${timestamp}.xlsx`;
+            
+            // Save file
+            XLSX.writeFile(wb, filename);
         }
     </script>
 </body>

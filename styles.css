@@ -17,10 +17,14 @@ body {
 
 .left-sidebar {
     width: 500px;
+    min-width: 300px;
+    max-width: 800px;
     background-color: #fff;
     border-right: 2px solid #dee2e6;
     overflow-y: auto;
     padding: 20px;
+    resize: horizontal;
+    position: relative;
 }
 
 .right-content {
