@@ -652,27 +652,14 @@ function checkPriceMatch(claim) {
     const basePrice = priceList[code].basePrice;
     const codeModifiers = getModifiersForCode(code);
     
-    // If no modifiers can be applied to this code, treat as valid
+    // If no modifiers can be applied to this code, cannot validate pricing
     if (!codeModifiers) {
-        const expectedPricePerUnit = basePrice;
-        const expectedPriceTotal = expectedPricePerUnit * quantity;
-        
-        // Allow small tolerance for floating point comparison
-        if (Math.abs(actualPrice - expectedPriceTotal) < 0.01) {
-            return {
-                status: 'Match',
-                expectedPrice: expectedPriceTotal,
-                matchedModifier: 'No modifier (default)',
-                category: 'No Category'
-            };
-        } else {
-            return {
-                status: 'Mismatch',
-                expectedPrice: expectedPriceTotal,
-                matchedModifier: null,
-                category: 'No Category'
-            };
-        }
+        return {
+            status: 'Not Found',
+            expectedPrice: basePrice * quantity,
+            matchedModifier: 'N/A',
+            category: 'No Category'
+        };
     }
     
     // Try to match with each modifier type (thiqa, lowEnd, basic)
