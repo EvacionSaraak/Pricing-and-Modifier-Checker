@@ -19,23 +19,32 @@
         <!-- Main Content -->
         <div class="content-wrapper">
             <!-- Left Sidebar - Upload, Modifiers, and Search -->
-            <div class="left-sidebar">
+            <div class="left-sidebar" id="leftSidebar">
+                <!-- Resize Handle -->
+                <div class="resize-handle" id="resizeHandle"></div>
+                
                 <!-- XML Upload Section -->
                 <h5 class="mb-3">Upload XML Claims</h5>
                 <div class="mb-3">
                     <label for="xmlFile" class="form-label">XML File</label>
                     <input type="file" class="form-control" id="xmlFile" accept=".xml">
                 </div>
-                <div class="d-grid gap-2 mb-4">
-                    <button class="btn btn-primary" onclick="processXML()">
-                        <i class="bi bi-gear-fill"></i> Process Claims
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="toggleInvalidFilter()">
-                        <i class="bi bi-funnel"></i> <span id="filterButtonText">Show Only Invalids</span>
-                    </button>
-                    <button class="btn btn-success" onclick="exportToExcel()" id="exportBtn" style="display:none;">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
-                    </button>
+                <div class="row g-2 mb-4">
+                    <div class="col-4">
+                        <button class="btn btn-primary w-100" onclick="processXML()">
+                            <i class="bi bi-gear-fill"></i> Process
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-outline-secondary w-100" onclick="toggleInvalidFilter()">
+                            <i class="bi bi-funnel"></i> <span id="filterButtonText">Invalids</span>
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-success w-100" onclick="exportToExcel()" id="exportBtn">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Export
+                        </button>
+                    </div>
                 </div>
                 
                 <hr class="my-4">
@@ -152,7 +161,44 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeModifiers();
             loadPricesXLSX(); // Load Prices.xlsx on startup
+            initializeResizeHandle(); // Initialize sidebar resizing
         });
+        
+        // Initialize resize handle for sidebar
+        function initializeResizeHandle() {
+            const resizeHandle = document.getElementById('resizeHandle');
+            const sidebar = document.getElementById('leftSidebar');
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+            
+            resizeHandle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+                
+                const width = startWidth + (e.clientX - startX);
+                const minWidth = 300;
+                const maxWidth = 800;
+                
+                if (width >= minWidth && width <= maxWidth) {
+                    sidebar.style.width = width + 'px';
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                }
+            });
+        }
         
         // Initialize default modifiers based on code types
         function initializeModifiers() {
@@ -616,16 +662,15 @@
                 </div>
             `;
             
-            // Show results table and export button
+            // Show results table (export button always visible)
             document.getElementById('resultsTable').style.display = 'block';
-            document.getElementById('exportBtn').style.display = 'block';
         }
         
         // Toggle invalid filter
         function toggleInvalidFilter() {
             showOnlyInvalids = !showOnlyInvalids;
             const buttonText = document.getElementById('filterButtonText');
-            buttonText.textContent = showOnlyInvalids ? 'Show All Results' : 'Show Only Invalids';
+            buttonText.textContent = showOnlyInvalids ? 'All' : 'Invalids';
             
             if (processedClaims.length > 0) {
                 renderResults();
