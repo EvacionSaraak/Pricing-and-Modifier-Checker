@@ -281,58 +281,61 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Handle price list file upload
-document.getElementById('pricelistFile').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                
-                // Validate format - must have Code column
-                if (jsonData.length === 0) {
-                    console.error('Error: File is empty');
-                    showPricelistStatus('Error: File is empty', 'danger');
-                    return;
+// Handle price list file upload (if element exists in future)
+const pricelistFileInput = document.getElementById('pricelistFile');
+if (pricelistFileInput) {
+    pricelistFileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    // Validate format - must have Code column
+                    if (jsonData.length === 0) {
+                        console.error('Error: File is empty');
+                        showPricelistStatus('Error: File is empty', 'danger');
+                        return;
+                    }
+                    
+                    const firstRow = jsonData[0];
+                    const hasCode = 'Code' in firstRow || 'code' in firstRow;
+                    const hasDescription = 'Code Description' in firstRow || 'Name' in firstRow || 'name' in firstRow;
+                    const hasPrice = 'Price \n(AED)' in firstRow || 'Price' in firstRow || 'Thiqa' in firstRow || 'thiqa' in firstRow;
+                    
+                    if (!hasCode) {
+                        console.error('Error: Invalid format - missing Code column');
+                        showPricelistStatus('Error: Invalid format - file must have a "Code" column', 'danger');
+                        return;
+                    }
+                    
+                    if (!hasDescription && !hasPrice) {
+                        console.error('Error: Invalid format - missing description and price columns');
+                        showPricelistStatus('Error: Invalid format - file must have description and/or price columns', 'danger');
+                        return;
+                    }
+                    
+                    // Process the data
+                    processLoadedPrices(jsonData);
+                    
+                    showPricelistStatus('Price list uploaded successfully! ' + allPrices.length + ' items loaded.', 'success');
+                    
+                    // Clear search and refresh
+                    document.getElementById('priceSearch').value = '';
+                    searchPrices();
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    showPricelistStatus('Error reading Excel file: ' + error.message, 'danger');
                 }
-                
-                const firstRow = jsonData[0];
-                const hasCode = 'Code' in firstRow || 'code' in firstRow;
-                const hasDescription = 'Code Description' in firstRow || 'Name' in firstRow || 'name' in firstRow;
-                const hasPrice = 'Price \n(AED)' in firstRow || 'Price' in firstRow || 'Thiqa' in firstRow || 'thiqa' in firstRow;
-                
-                if (!hasCode) {
-                    console.error('Error: Invalid format - missing Code column');
-                    showPricelistStatus('Error: Invalid format - file must have a "Code" column', 'danger');
-                    return;
-                }
-                
-                if (!hasDescription && !hasPrice) {
-                    console.error('Error: Invalid format - missing description and price columns');
-                    showPricelistStatus('Error: Invalid format - file must have description and/or price columns', 'danger');
-                    return;
-                }
-                
-                // Process the data
-                processLoadedPrices(jsonData);
-                
-                showPricelistStatus('Price list uploaded successfully! ' + allPrices.length + ' items loaded.', 'success');
-                
-                // Clear search and refresh
-                document.getElementById('priceSearch').value = '';
-                searchPrices();
-            } catch (error) {
-                console.error('Error reading Excel file:', error);
-                showPricelistStatus('Error reading Excel file: ' + error.message, 'danger');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+}
 
 // Show pricelist status message
 function showPricelistStatus(message, type) {
@@ -458,6 +461,7 @@ function renderResults() {
     let matchCount = 0;
     let mismatchCount = 0;
     let notFoundCount = 0;
+    let errorCount = 0;
     
     claims.forEach(claim => {
         const result = checkPriceMatch(claim);
@@ -470,6 +474,9 @@ function renderResults() {
         } else if (result.status === 'Not Found') {
             row.className = 'match-warning';
             notFoundCount++;
+        } else if (result.status === 'Error') {
+            row.className = 'match-error';
+            errorCount++;
         } else {
             row.className = 'match-danger';
             mismatchCount++;
@@ -485,7 +492,7 @@ function renderResults() {
             <td>${claim.clinician}</td>
             <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
             <td>${result.matchedModifier || 'N/A'}</td>
-            <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : 'bg-danger'}">${result.status}</span></td>
+            <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : result.status === 'Error' ? 'bg-dark' : 'bg-danger'}">${result.status}</span></td>
         `;
     });
     
@@ -493,6 +500,7 @@ function renderResults() {
     const allMatchCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Match').length;
     const allMismatchCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Mismatch').length;
     const allNotFoundCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Not Found').length;
+    const allErrorCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Error').length;
     
     const summaryDiv = document.getElementById('summarySection');
     summaryDiv.innerHTML = `
@@ -501,7 +509,7 @@ function renderResults() {
             Total Claims: ${processedClaims.length} | 
             <span class="text-success">Matches: ${allMatchCount}</span> | 
             <span class="text-danger">Mismatches: ${allMismatchCount}</span> | 
-            <span class="text-warning">Not Found: ${allNotFoundCount}</span>
+            <span class="text-warning">Not Found: ${allNotFoundCount}</span>${allErrorCount > 0 ? ' | <span class="text-dark">Errors: ' + allErrorCount + '</span>' : ''}
             ${showOnlyInvalids ? ' <em>(Showing filtered results: ' + claims.length + ' items)</em>' : ''}
         </div>
     `;
@@ -525,7 +533,18 @@ function toggleInvalidFilter() {
 function checkPriceMatch(claim) {
     const code = claim.code;
     const actualPrice = claim.net;
+    const quantity = claim.quantity || 1;
     const codeType = getCodeType(code);
+    
+    // Check if code is 00000 - treat as error
+    if (code === '00000') {
+        return {
+            status: 'Error',
+            expectedPrice: null,
+            matchedModifier: null,
+            category: 'Invalid Code'
+        };
+    }
     
     // Check if code exists in price list and has basePrice
     if (!priceList[code] || !priceList[code].basePrice) {
@@ -542,12 +561,25 @@ function checkPriceMatch(claim) {
     
     // If no modifiers can be applied to this code, treat as valid
     if (!codeModifiers) {
-        return {
-            status: 'Match',
-            expectedPrice: basePrice,
-            matchedModifier: 'No modifier (default)',
-            category: 'No Category'
-        };
+        const expectedPricePerUnit = basePrice;
+        const expectedPriceTotal = expectedPricePerUnit * quantity;
+        
+        // Allow small tolerance for floating point comparison
+        if (Math.abs(actualPrice - expectedPriceTotal) < 0.01) {
+            return {
+                status: 'Match',
+                expectedPrice: expectedPriceTotal,
+                matchedModifier: 'No modifier (default)',
+                category: 'No Category'
+            };
+        } else {
+            return {
+                status: 'Mismatch',
+                expectedPrice: expectedPriceTotal,
+                matchedModifier: null,
+                category: 'No Category'
+            };
+        }
     }
     
     // Try to match with each modifier type (thiqa, lowEnd, basic)
@@ -558,13 +590,14 @@ function checkPriceMatch(claim) {
     ];
     
     for (let modType of modifierTypes) {
-        const expectedPrice = basePrice * modType.value;
+        const expectedPricePerUnit = basePrice * modType.value;
+        const expectedPriceTotal = expectedPricePerUnit * quantity;
         
         // Allow small tolerance for floating point comparison
-        if (Math.abs(actualPrice - expectedPrice) < 0.01) {
+        if (Math.abs(actualPrice - expectedPriceTotal) < 0.01) {
             return {
                 status: 'Match',
-                expectedPrice: expectedPrice,
+                expectedPrice: expectedPriceTotal,
                 matchedModifier: `${modType.name} (${modType.value})`,
                 category: codeType
             };
@@ -574,7 +607,7 @@ function checkPriceMatch(claim) {
     // No match found
     return {
         status: 'Mismatch',
-        expectedPrice: basePrice * codeModifiers.thiqa,
+        expectedPrice: basePrice * codeModifiers.thiqa * quantity,
         matchedModifier: null,
         category: codeType
     };

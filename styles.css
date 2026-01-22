@@ -45,7 +45,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 20px;
 }
 
@@ -80,11 +80,23 @@ body {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
 }
 
 .table-responsive {
-    max-height: 500px;
+    flex: 1;
     overflow-y: auto;
+    position: relative;
+}
+
+.table-responsive thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #212529;
 }
 
 .nav-tabs .nav-link {
@@ -124,6 +136,10 @@ body {
 
 .match-danger {
     background-color: #f8d7da;
+}
+
+.match-error {
+    background-color: #e2e3e5;
 }
 
 .modifiers-table {
