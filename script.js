@@ -94,8 +94,6 @@ function getModifiersForCode(code) {
     return modifiers.find(m => m.type === codeType);
 }
 
-// Add new modifier
-
 // Load Prices.xlsx on startup
 async function loadPricesXLSX() {
     try {
@@ -155,8 +153,6 @@ function processLoadedPrices(jsonData) {
     });
 }
 
-// Search prices
-// Search prices
 // Search prices
 function searchPrices() {
     const searchTerm = document.getElementById('priceSearch').value.toLowerCase().trim();
@@ -396,7 +392,6 @@ function processXML() {
 }
 
 // Parse claims from XML document
-// Parse claims from XML document
 function parseXMLClaims(xmlDoc) {
     const claims = [];
     
@@ -443,13 +438,11 @@ function parseXMLClaims(xmlDoc) {
 }
 
 // Display results in table
-// Display results in table
 function displayResults(claims) {
     processedClaims = claims; // Store for filtering
     renderResults();
 }
 
-// Render results (with optional filtering)
 // Render results (with optional filtering)
 function renderResults() {
     const claims = showOnlyInvalids ? 
