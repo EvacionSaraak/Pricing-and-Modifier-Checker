@@ -553,6 +553,7 @@ function renderResults() {
             <td>${claim.net.toFixed(2)}</td>
             <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
             <td><span class="badge status-badge ${result.status === 'Match' ? 'match-success' : result.status === 'Not Found' ? 'match-warning' : result.status === 'Error' ? 'match-error' : 'match-danger'}">${result.status}</span></td>
+            <td>${result.reason || '-'}</td>
         `;
     });
     
@@ -635,7 +636,8 @@ function checkPriceMatch(claim) {
             status: 'Error',
             expectedPrice: null,
             matchedModifier: null,
-            category: 'Invalid Code'
+            category: 'Invalid Code',
+            reason: 'Invalid code 00000'
         };
     }
     
@@ -645,7 +647,8 @@ function checkPriceMatch(claim) {
             status: 'Not Found',
             expectedPrice: null,
             matchedModifier: null,
-            category: codeType || 'Unknown'
+            category: codeType || 'Unknown',
+            reason: 'Code not in price list'
         };
     }
     
@@ -658,7 +661,8 @@ function checkPriceMatch(claim) {
             status: 'Not Found',
             expectedPrice: basePrice * quantity,
             matchedModifier: 'N/A',
-            category: 'No Category'
+            category: 'No Category',
+            reason: 'No modifier category available'
         };
     }
     
@@ -679,17 +683,20 @@ function checkPriceMatch(claim) {
                 status: 'Match',
                 expectedPrice: expectedPriceTotal,
                 matchedModifier: `${modType.name} (${modType.value})`,
-                category: codeType
+                category: codeType,
+                reason: '-'
             };
         }
     }
     
     // No match found - provide reason
+    const availableModifiers = `Thiqa=${codeModifiers.thiqa}, Low-End=${codeModifiers.lowEnd}, Basic=${codeModifiers.basic}`;
     return {
         status: 'Mismatch',
         expectedPrice: basePrice * codeModifiers.thiqa * quantity,
         matchedModifier: 'No modifier matched',
-        category: codeType
+        category: codeType,
+        reason: `Price doesn't match any modifier (${availableModifiers})`
     };
 }
 
@@ -713,7 +720,8 @@ function exportToExcel() {
             'Clinician': claim.clinician,
             'Expected Price': result.expectedPrice !== null ? result.expectedPrice : 'N/A',
             'Modifier': result.matchedModifier || 'N/A',
-            'Status': result.status
+            'Status': result.status,
+            'Reason': result.reason || '-'
         };
     });
     
