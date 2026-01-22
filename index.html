@@ -116,6 +116,29 @@
         .match-danger {
             background-color: #f8d7da;
         }
+        
+        .modifiers-table {
+            width: 100%;
+            font-size: 0.9rem;
+        }
+        
+        .modifiers-table th {
+            background-color: #f8f9fa;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+        }
+        
+        .modifiers-table td {
+            padding: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .modifiers-table input {
+            width: 60px;
+            padding: 3px 5px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -131,11 +154,8 @@
             <div class="left-sidebar">
                 <h5 class="mb-3">Price Modifiers</h5>
                 <div id="modifiersList">
-                    <!-- Modifiers will be dynamically populated here -->
+                    <!-- Modifiers table will be dynamically populated here -->
                 </div>
-                <button class="btn btn-sm btn-outline-primary mt-3" onclick="addModifier()">
-                    <i class="bi bi-plus-circle"></i> Add Modifier
-                </button>
             </div>
             
             <!-- Right Content Area -->
@@ -201,15 +221,13 @@
                                             <th style="width: 300px;">Description</th>
                                             <th style="width: 100px;">Base Price</th>
                                             <th style="width: 100px;">Thiqa</th>
-                                            <th style="width: 100px;">High-end</th>
-                                            <th style="width: 100px;">Mid-range</th>
                                             <th style="width: 100px;">Low-End</th>
                                             <th style="width: 100px;">Basic</th>
                                         </tr>
                                     </thead>
                                     <tbody id="priceSearchBody">
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted">
+                                            <td colspan="6" class="text-center text-muted">
                                                 Type in the search box to find prices...
                                             </td>
                                         </tr>
@@ -282,34 +300,50 @@
             loadPricesXLSX(); // Load Prices.xlsx on startup
         });
         
-        // Initialize default modifiers
+        // Initialize default modifiers based on code types
         function initializeModifiers() {
             modifiers = [
-                { name: 'Thiqa', value: 1.0 },
-                { name: 'High-end', value: 1.3 },
-                { name: 'Mid-range', value: 1.2 },
-                { name: 'Low-End', value: 1.1 },
-                { name: 'Basic', value: 1.0 }
+                { type: 'Medical', thiqa: 1.3, lowEnd: 1.0, basic: 1.0 },
+                { type: 'Radiology', thiqa: 1.0, lowEnd: 1.0, basic: 1.0 },
+                { type: 'Laboratory', thiqa: 1.0, lowEnd: 1.0, basic: 1.0 },
+                { type: 'Physiotherapy', thiqa: 1.0, lowEnd: 1.0, basic: 1.0 },
+                { type: 'OP E&M', thiqa: 1.3, lowEnd: 1.08, basic: 1.0 }
             ];
             renderModifiers();
         }
         
-        // Add new modifier
-        function addModifier() {
-            const name = prompt('Enter modifier name:');
-            if (name) {
-                modifiers.push({ name: name, value: 1.0 });
-                renderModifiers();
-            }
+        // Determine code type based on code prefix
+        function getCodeType(code) {
+            if (!code) return null;
+            const codeStr = code.toString();
+            
+            // Medical starts with 1, 2, 3, 4, 5, and 6
+            if (/^[1-6]/.test(codeStr)) return 'Medical';
+            
+            // Radiology starts with 7
+            if (codeStr.startsWith('7')) return 'Radiology';
+            
+            // Laboratory starts with 8
+            if (codeStr.startsWith('8')) return 'Laboratory';
+            
+            // Physiotherapy starts with 97
+            if (codeStr.startsWith('97')) return 'Physiotherapy';
+            
+            // OP E&M starts with 99
+            if (codeStr.startsWith('99')) return 'OP E&M';
+            
+            return null;
         }
         
-        // Remove modifier
-        function removeModifier(index) {
-            if (confirm('Are you sure you want to remove this modifier?')) {
-                modifiers.splice(index, 1);
-                renderModifiers();
-            }
+        // Get modifiers for a specific code
+        function getModifiersForCode(code) {
+            const codeType = getCodeType(code);
+            if (!codeType) return null;
+            
+            return modifiers.find(m => m.type === codeType);
         }
+        
+        // Add new modifier
         
         // Load Prices.xlsx on startup
         async function loadPricesXLSX() {
@@ -371,12 +405,13 @@
         }
         
         // Search prices
+        // Search prices
         function searchPrices() {
             const searchTerm = document.getElementById('priceSearch').value.toLowerCase().trim();
             const tbody = document.getElementById('priceSearchBody');
             
             if (!searchTerm) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Type in the search box to find prices...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Type in the search box to find prices...</td></tr>';
                 return;
             }
             
@@ -387,7 +422,7 @@
             );
             
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No results found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No results found</td></tr>';
                 return;
             }
             
@@ -396,53 +431,67 @@
             
             tbody.innerHTML = displayResults.map(item => {
                 const basePrice = item.basePrice;
-                const pricesWithModifiers = modifiers.map(mod => {
-                    return (basePrice * mod.value).toFixed(2);
-                });
+                const codeModifiers = getModifiersForCode(item.code);
+                
+                // Calculate prices with modifiers
+                const thiqaPrice = codeModifiers ? (basePrice * codeModifiers.thiqa).toFixed(2) : 'N/A';
+                const lowEndPrice = codeModifiers ? (basePrice * codeModifiers.lowEnd).toFixed(2) : 'N/A';
+                const basicPrice = codeModifiers ? (basePrice * codeModifiers.basic).toFixed(2) : 'N/A';
                 
                 return `
                     <tr>
                         <td>${escapeHtml(item.code)}</td>
                         <td>${escapeHtml(item.description)}</td>
                         <td>${basePrice.toFixed(2)}</td>
-                        ${pricesWithModifiers.map(price => `<td>${price}</td>`).join('')}
+                        <td>${thiqaPrice}</td>
+                        <td>${lowEndPrice}</td>
+                        <td>${basicPrice}</td>
                     </tr>
                 `;
             }).join('');
             
             if (filtered.length > MAX_SEARCH_RESULTS) {
-                tbody.innerHTML += `<tr><td colspan="8" class="text-center text-muted">Showing ${MAX_SEARCH_RESULTS} of ${filtered.length} results. Refine your search for more specific results.</td></tr>`;
+                tbody.innerHTML += `<tr><td colspan="6" class="text-center text-muted">Showing ${MAX_SEARCH_RESULTS} of ${filtered.length} results. Refine your search for more specific results.</td></tr>`;
             }
         }
         
         // Update search results when modifiers change
+        // Render modifiers table
         function renderModifiers() {
             const container = document.getElementById('modifiersList');
-            container.innerHTML = '';
             
-            modifiers.forEach((modifier, index) => {
-                const modifierDiv = document.createElement('div');
-                modifierDiv.className = 'modifier-item';
-                modifierDiv.innerHTML = `
-                    <label>${modifier.name}</label>
-                    <div class="input-group input-group-sm">
-                        <input type="number" class="form-control" value="${modifier.value}" 
-                               step="0.1" onchange="updateModifier(${index}, this.value)">
-                        <button class="btn btn-outline-danger" onclick="removeModifier(${index})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(modifierDiv);
-            });
+            const tableHTML = `
+                <table class="modifiers-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Thiqa</th>
+                            <th>Low-End</th>
+                            <th>Basic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${modifiers.map((mod, index) => `
+                            <tr>
+                                <td><strong>${mod.type}</strong></td>
+                                <td><input type="number" step="0.01" value="${mod.thiqa}" onchange="updateModifier(${index}, 'thiqa', this.value)"></td>
+                                <td><input type="number" step="0.01" value="${mod.lowEnd}" onchange="updateModifier(${index}, 'lowEnd', this.value)"></td>
+                                <td><input type="number" step="0.01" value="${mod.basic}" onchange="updateModifier(${index}, 'basic', this.value)"></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
             
             // Update search results with new modifier values
             searchPrices();
         }
         
         // Update modifier value
-        function updateModifier(index, value) {
-            modifiers[index].value = parseFloat(value);
+        function updateModifier(index, field, value) {
+            modifiers[index][field] = parseFloat(value);
             searchPrices(); // Refresh search results with new modifier values
         }
         
@@ -662,17 +711,32 @@
             }
             
             const basePrice = priceList[code].basePrice;
+            const codeModifiers = getModifiersForCode(code);
             
-            // Try to match with each modifier
-            for (let modifier of modifiers) {
-                const expectedPrice = basePrice * modifier.value;
+            if (!codeModifiers) {
+                return {
+                    status: 'Not Found',
+                    expectedPrice: null,
+                    matchedModifier: 'Unknown code type'
+                };
+            }
+            
+            // Try to match with each modifier type (thiqa, lowEnd, basic)
+            const modifierTypes = [
+                { name: 'Thiqa', value: codeModifiers.thiqa },
+                { name: 'Low-End', value: codeModifiers.lowEnd },
+                { name: 'Basic', value: codeModifiers.basic }
+            ];
+            
+            for (let modType of modifierTypes) {
+                const expectedPrice = basePrice * modType.value;
                 
                 // Allow small tolerance for floating point comparison
                 if (Math.abs(actualPrice - expectedPrice) < 0.01) {
                     return {
                         status: 'Match',
                         expectedPrice: expectedPrice,
-                        matchedModifier: `${modifier.name} (${modifier.value})`
+                        matchedModifier: `${modType.name} (${modType.value})`
                     };
                 }
             }
@@ -680,7 +744,7 @@
             // No match found
             return {
                 status: 'Mismatch',
-                expectedPrice: basePrice * (modifiers.length > 0 ? modifiers[0].value : 1.0),
+                expectedPrice: basePrice * codeModifiers.thiqa,
                 matchedModifier: null
             };
         }
