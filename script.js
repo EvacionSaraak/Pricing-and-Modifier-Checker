@@ -6,13 +6,22 @@ let priceList = {}; // Will hold price data from Prices.xlsx
 let modifiers = [];
 let allPrices = []; // Array to hold all price records for searching
 let processedClaims = []; // Store processed claims for filtering
-let showOnlyInvalids = false; // Filter state
+let statusFilters = {
+    Match: true,
+    Mismatch: true,
+    'Not Found': true,
+    Error: true
+}; // Filter state for selective status filtering
+let activeModifiers = {}; // Store active modifier selections per category
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeModifiers();
     loadPricesXLSX(); // Load Prices.xlsx on startup
     initializeResizeHandle(); // Initialize sidebar resizing
+    initializeTableHoverHighlight(); // Initialize row/column highlighting
+    loadModifierSettings(); // Load saved modifier settings
+    updateModifierDisplayValues(); // Update displayed values in modifiers tab
 });
 
 // Initialize resize handle for sidebar
@@ -48,6 +57,59 @@ function initializeResizeHandle() {
             isResizing = false;
             document.body.style.cursor = '';
         }
+    });
+}
+
+// Initialize table hover highlighting for row and column
+function initializeTableHoverHighlight() {
+    // Use event delegation on the table
+    const table = document.getElementById('resultsTableData');
+    if (!table) return;
+    
+    table.addEventListener('mouseover', function(e) {
+        const cell = e.target.closest('td');
+        if (!cell) return;
+        
+        const row = cell.parentElement;
+        const columnIndex = Array.from(row.children).indexOf(cell);
+        
+        // Highlight the entire row
+        row.classList.add('row-highlighted');
+        
+        // Highlight all cells in the same column
+        const allRows = table.querySelectorAll('tbody tr');
+        allRows.forEach(r => {
+            const targetCell = r.children[columnIndex];
+            if (targetCell) {
+                targetCell.classList.add('column-highlighted');
+            }
+        });
+        
+        // Add special class to the hovered cell
+        cell.classList.add('cell-hovered');
+    });
+    
+    table.addEventListener('mouseout', function(e) {
+        const cell = e.target.closest('td');
+        if (!cell) return;
+        
+        const row = cell.parentElement;
+        const columnIndex = Array.from(row.children).indexOf(cell);
+        
+        // Remove row highlighting
+        row.classList.remove('row-highlighted');
+        
+        // Remove column highlighting
+        const allRows = table.querySelectorAll('tbody tr');
+        allRows.forEach(r => {
+            const targetCell = r.children[columnIndex];
+            if (targetCell) {
+                targetCell.classList.remove('column-highlighted');
+            }
+        });
+        
+        // Remove hovered cell class
+        cell.classList.remove('cell-hovered');
     });
 }
 
@@ -272,6 +334,89 @@ function renderModifiers() {
 function updateModifier(index, field, value) {
     modifiers[index][field] = parseFloat(value);
     searchPrices(); // Refresh search results with new modifier values
+    updateModifierDisplayValues(); // Update values in modifiers tab
+}
+
+// Update modifier display values in the Modifiers tab
+function updateModifierDisplayValues() {
+    modifiers.forEach(modifier => {
+        const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace('&', '');
+        const thiqaEl = document.getElementById(`${type}-thiqa-value`);
+        const lowEndEl = document.getElementById(`${type}-lowend-value`);
+        const basicEl = document.getElementById(`${type}-basic-value`);
+        
+        // Only update if elements exist (they don't exist in current UI)
+        if (thiqaEl) thiqaEl.textContent = modifier.thiqa;
+        if (lowEndEl) lowEndEl.textContent = modifier.lowEnd;
+        if (basicEl) basicEl.textContent = modifier.basic;
+    });
+}
+
+// Load modifier settings from localStorage
+function loadModifierSettings() {
+    const saved = localStorage.getItem('activeModifiers');
+    if (saved) {
+        activeModifiers = JSON.parse(saved);
+        
+        // Apply saved settings to radio buttons
+        for (const [category, modifierType] of Object.entries(activeModifiers)) {
+            const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-${modifierType}`;
+            const radio = document.getElementById(radioId);
+            if (radio) {
+                radio.checked = true;
+            }
+        }
+    } else {
+        // Set defaults
+        setDefaultModifierSettings();
+    }
+}
+
+// Set default modifier settings
+function setDefaultModifierSettings() {
+    activeModifiers = {
+        'Medical': 'thiqa',
+        'Radiology': 'lowEnd',
+        'Laboratory': 'lowEnd',
+        'Physiotherapy': 'lowEnd',
+        'OP E&M': 'thiqa'
+    };
+}
+
+// Save modifier settings to localStorage
+function saveModifierSettings() {
+    const categories = ['Medical', 'Radiology', 'Laboratory', 'Physiotherapy', 'OP E&M'];
+    
+    categories.forEach(category => {
+        const radioName = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-modifier`;
+        const selected = document.querySelector(`input[name="${radioName}"]:checked`);
+        if (selected) {
+            activeModifiers[category] = selected.value;
+        }
+    });
+    
+    localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    
+    alert('Modifier settings saved successfully!');
+    
+    // Re-render results if claims are already processed
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
+}
+
+// Reset modifier settings to defaults
+function resetModifierSettings() {
+    setDefaultModifierSettings();
+    
+    // Update radio buttons to reflect defaults
+    document.getElementById('medical-thiqa').checked = true;
+    document.getElementById('radiology-lowend').checked = true;
+    document.getElementById('laboratory-lowend').checked = true;
+    document.getElementById('physiotherapy-lowend').checked = true;
+    document.getElementById('opem-thiqa').checked = true;
+    
+    alert('Modifier settings reset to defaults!');
 }
 
 // Escape HTML to prevent XSS
@@ -281,58 +426,62 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Handle price list file upload
-document.getElementById('pricelistFile').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                
-                // Validate format - must have Code column
-                if (jsonData.length === 0) {
-                    console.error('Error: File is empty');
-                    showPricelistStatus('Error: File is empty', 'danger');
-                    return;
+// Handle price list file upload - safely check if element exists
+// Note: This element is not currently in the HTML but code is defensive
+const pricelistFileInput = document.getElementById('pricelistFile');
+if (pricelistFileInput) {
+    pricelistFileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    // Validate format - must have Code column
+                    if (jsonData.length === 0) {
+                        console.error('Error: File is empty');
+                        showPricelistStatus('Error: File is empty', 'danger');
+                        return;
+                    }
+                    
+                    const firstRow = jsonData[0];
+                    const hasCode = 'Code' in firstRow || 'code' in firstRow;
+                    const hasDescription = 'Code Description' in firstRow || 'Name' in firstRow || 'name' in firstRow;
+                    const hasPrice = 'Price \n(AED)' in firstRow || 'Price' in firstRow || 'Thiqa' in firstRow || 'thiqa' in firstRow;
+                    
+                    if (!hasCode) {
+                        console.error('Error: Invalid format - missing Code column');
+                        showPricelistStatus('Error: Invalid format - file must have a "Code" column', 'danger');
+                        return;
+                    }
+                    
+                    if (!hasDescription && !hasPrice) {
+                        console.error('Error: Invalid format - missing description and price columns');
+                        showPricelistStatus('Error: Invalid format - file must have description and/or price columns', 'danger');
+                        return;
+                    }
+                    
+                    // Process the data
+                    processLoadedPrices(jsonData);
+                    
+                    showPricelistStatus('Price list uploaded successfully! ' + allPrices.length + ' items loaded.', 'success');
+                    
+                    // Clear search and refresh
+                    document.getElementById('priceSearch').value = '';
+                    searchPrices();
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    showPricelistStatus('Error reading Excel file: ' + error.message, 'danger');
                 }
-                
-                const firstRow = jsonData[0];
-                const hasCode = 'Code' in firstRow || 'code' in firstRow;
-                const hasDescription = 'Code Description' in firstRow || 'Name' in firstRow || 'name' in firstRow;
-                const hasPrice = 'Price \n(AED)' in firstRow || 'Price' in firstRow || 'Thiqa' in firstRow || 'thiqa' in firstRow;
-                
-                if (!hasCode) {
-                    console.error('Error: Invalid format - missing Code column');
-                    showPricelistStatus('Error: Invalid format - file must have a "Code" column', 'danger');
-                    return;
-                }
-                
-                if (!hasDescription && !hasPrice) {
-                    console.error('Error: Invalid format - missing description and price columns');
-                    showPricelistStatus('Error: Invalid format - file must have description and/or price columns', 'danger');
-                    return;
-                }
-                
-                // Process the data
-                processLoadedPrices(jsonData);
-                
-                showPricelistStatus('Price list uploaded successfully! ' + allPrices.length + ' items loaded.', 'success');
-                
-                // Clear search and refresh
-                document.getElementById('priceSearch').value = '';
-                searchPrices();
-            } catch (error) {
-                console.error('Error reading Excel file:', error);
-                showPricelistStatus('Error reading Excel file: ' + error.message, 'danger');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+}
 
 // Show pricelist status message
 function showPricelistStatus(message, type) {
@@ -410,9 +559,15 @@ function parseXMLClaims(xmlDoc) {
         const activities = claimEl.querySelectorAll('Activity, activity, Service, service, Item, item');
         
         activities.forEach(activity => {
+            // Get type from activity first, fallback to claim level
+            const activityType = activity.querySelector('Type')?.textContent || 
+                               activity.querySelector('type')?.textContent ||
+                               activity.querySelector('Encounter Type')?.textContent ||
+                               encounterType;
+            
             const claim = {
                 claimId: claimId,
-                type: encounterType,
+                type: activityType,
                 code: activity.querySelector('Code')?.textContent || 
                       activity.querySelector('code')?.textContent || 
                       activity.querySelector('ServiceCode')?.textContent || 
@@ -445,12 +600,10 @@ function displayResults(claims) {
 
 // Render results (with optional filtering)
 function renderResults() {
-    const claims = showOnlyInvalids ? 
-        processedClaims.filter(claim => {
-            const result = checkPriceMatch(claim);
-            return result.status !== 'Match';
-        }) : 
-        processedClaims;
+    const claims = processedClaims.filter(claim => {
+        const result = checkPriceMatch(claim);
+        return statusFilters[result.status] === true;
+    });
     
     const tbody = document.getElementById('resultsBody');
     tbody.innerHTML = '';
@@ -458,34 +611,35 @@ function renderResults() {
     let matchCount = 0;
     let mismatchCount = 0;
     let notFoundCount = 0;
+    let errorCount = 0;
     
     claims.forEach(claim => {
         const result = checkPriceMatch(claim);
         const row = tbody.insertRow();
         
-        // Apply row styling based on match status
+        // Don't apply row styling - only style the status span
         if (result.status === 'Match') {
-            row.className = 'match-success';
             matchCount++;
         } else if (result.status === 'Not Found') {
-            row.className = 'match-warning';
             notFoundCount++;
+        } else if (result.status === 'Error') {
+            errorCount++;
         } else {
-            row.className = 'match-danger';
             mismatchCount++;
         }
         
         row.innerHTML = `
             <td>${claim.claimId}</td>
+            <td>${claim.clinician}</td>
             <td>${claim.type}</td>
             <td>${claim.code}</td>
             <td>${result.category || 'N/A'}</td>
-            <td>${claim.net.toFixed(2)}</td>
-            <td>${claim.quantity}</td>
-            <td>${claim.clinician}</td>
-            <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
             <td>${result.matchedModifier || 'N/A'}</td>
-            <td><span class="badge ${result.status === 'Match' ? 'bg-success' : result.status === 'Not Found' ? 'bg-warning' : 'bg-danger'}">${result.status}</span></td>
+            <td>${claim.quantity}</td>
+            <td>${claim.net.toFixed(2)}</td>
+            <td>${result.expectedPrice !== null ? result.expectedPrice.toFixed(2) : 'N/A'}</td>
+            <td><span class="badge status-badge ${result.status === 'Match' ? 'match-success' : result.status === 'Not Found' ? 'match-warning' : result.status === 'Error' ? 'match-error' : 'match-danger'}">${result.status}</span></td>
+            <td>${result.reason || '-'}</td>
         `;
     });
     
@@ -493,6 +647,9 @@ function renderResults() {
     const allMatchCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Match').length;
     const allMismatchCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Mismatch').length;
     const allNotFoundCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Not Found').length;
+    const allErrorCount = processedClaims.filter(c => checkPriceMatch(c).status === 'Error').length;
+    
+    const isFiltered = claims.length !== processedClaims.length;
     
     const summaryDiv = document.getElementById('summarySection');
     summaryDiv.innerHTML = `
@@ -501,8 +658,8 @@ function renderResults() {
             Total Claims: ${processedClaims.length} | 
             <span class="text-success">Matches: ${allMatchCount}</span> | 
             <span class="text-danger">Mismatches: ${allMismatchCount}</span> | 
-            <span class="text-warning">Not Found: ${allNotFoundCount}</span>
-            ${showOnlyInvalids ? ' <em>(Showing filtered results: ' + claims.length + ' items)</em>' : ''}
+            <span class="text-warning">Not Found: ${allNotFoundCount}</span>${allErrorCount > 0 ? ' | <span class="text-dark">Errors: ' + allErrorCount + '</span>' : ''}
+            ${isFiltered ? ' <em>(Showing filtered results: ' + claims.length + ' items)</em>' : ''}
         </div>
     `;
     
@@ -510,11 +667,42 @@ function renderResults() {
     document.getElementById('resultsTable').style.display = 'block';
 }
 
-// Toggle invalid filter
-function toggleInvalidFilter() {
-    showOnlyInvalids = !showOnlyInvalids;
-    const buttonText = document.getElementById('filterButtonText');
-    buttonText.textContent = showOnlyInvalids ? 'All' : 'Invalids';
+// Update status filter
+function updateStatusFilter(status, checked) {
+    statusFilters[status] = checked;
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
+}
+
+// Select all filters
+function selectAllFilters() {
+    statusFilters.Match = true;
+    statusFilters.Mismatch = true;
+    statusFilters['Not Found'] = true;
+    statusFilters.Error = true;
+    
+    document.getElementById('filterMatch').checked = true;
+    document.getElementById('filterMismatch').checked = true;
+    document.getElementById('filterNotFound').checked = true;
+    document.getElementById('filterError').checked = true;
+    
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
+}
+
+// Clear all filters
+function clearAllFilters() {
+    statusFilters.Match = false;
+    statusFilters.Mismatch = false;
+    statusFilters['Not Found'] = false;
+    statusFilters.Error = false;
+    
+    document.getElementById('filterMatch').checked = false;
+    document.getElementById('filterMismatch').checked = false;
+    document.getElementById('filterNotFound').checked = false;
+    document.getElementById('filterError').checked = false;
     
     if (processedClaims.length > 0) {
         renderResults();
@@ -525,7 +713,19 @@ function toggleInvalidFilter() {
 function checkPriceMatch(claim) {
     const code = claim.code;
     const actualPrice = claim.net;
+    const quantity = claim.quantity || 1;
     const codeType = getCodeType(code);
+    
+    // Check if code is 00000 - treat as error
+    if (code === '00000') {
+        return {
+            status: 'Error',
+            expectedPrice: null,
+            matchedModifier: null,
+            category: 'Invalid Code',
+            reason: 'Invalid code 00000'
+        };
+    }
     
     // Check if code exists in price list and has basePrice
     if (!priceList[code] || !priceList[code].basePrice) {
@@ -533,51 +733,98 @@ function checkPriceMatch(claim) {
             status: 'Not Found',
             expectedPrice: null,
             matchedModifier: null,
-            category: codeType || 'Unknown'
+            category: codeType || 'Unknown',
+            reason: 'Code not in price list'
         };
     }
     
     const basePrice = priceList[code].basePrice;
     const codeModifiers = getModifiersForCode(code);
     
-    // If no modifiers can be applied to this code, treat as valid
+    // If no modifiers can be applied to this code, cannot validate pricing
     if (!codeModifiers) {
         return {
-            status: 'Match',
-            expectedPrice: basePrice,
-            matchedModifier: 'No modifier (default)',
-            category: 'No Category'
+            status: 'Not Found',
+            expectedPrice: basePrice * quantity,
+            matchedModifier: 'N/A',
+            category: 'No Category',
+            reason: 'No modifier category available'
         };
     }
     
-    // Try to match with each modifier type (thiqa, lowEnd, basic)
-    const modifierTypes = [
-        { name: 'Thiqa', value: codeModifiers.thiqa },
-        { name: 'Low-End', value: codeModifiers.lowEnd },
-        { name: 'Basic', value: codeModifiers.basic }
-    ];
+    // Check if there's an active modifier selection for this code type
+    const activeModifierType = activeModifiers[codeType];
     
-    for (let modType of modifierTypes) {
-        const expectedPrice = basePrice * modType.value;
+    if (activeModifierType) {
+        // Use only the active modifier for validation
+        const modifierValue = codeModifiers[activeModifierType];
+        const expectedPricePerUnit = basePrice * modifierValue;
+        const expectedPriceTotal = expectedPricePerUnit * quantity;
         
         // Allow small tolerance for floating point comparison
-        if (Math.abs(actualPrice - expectedPrice) < 0.01) {
+        if (Math.abs(actualPrice - expectedPriceTotal) < 0.01) {
             return {
                 status: 'Match',
-                expectedPrice: expectedPrice,
-                matchedModifier: `${modType.name} (${modType.value})`,
-                category: codeType
+                expectedPrice: expectedPriceTotal,
+                matchedModifier: `${getModifierName(activeModifierType)} (${modifierValue})`,
+                category: codeType,
+                reason: '-'
+            };
+        } else {
+            // Mismatch - show expected price for active modifier
+            const modifierName = getModifierName(activeModifierType);
+            return {
+                status: 'Mismatch',
+                expectedPrice: expectedPriceTotal,
+                matchedModifier: 'No match',
+                category: codeType,
+                reason: `Expected ${expectedPriceTotal.toFixed(2)} for ${modifierName} (${modifierValue})`
             };
         }
+    } else {
+        // No active modifier set - check all three (backward compatibility)
+        const modifierTypes = [
+            { name: 'Thiqa', value: codeModifiers.thiqa },
+            { name: 'Low-End', value: codeModifiers.lowEnd },
+            { name: 'Basic', value: codeModifiers.basic }
+        ];
+        
+        for (let modType of modifierTypes) {
+            const expectedPricePerUnit = basePrice * modType.value;
+            const expectedPriceTotal = expectedPricePerUnit * quantity;
+            
+            // Allow small tolerance for floating point comparison
+            if (Math.abs(actualPrice - expectedPriceTotal) < 0.01) {
+                return {
+                    status: 'Match',
+                    expectedPrice: expectedPriceTotal,
+                    matchedModifier: `${modType.name} (${modType.value})`,
+                    category: codeType,
+                    reason: '-'
+                };
+            }
+        }
+        
+        // No match found - provide reason
+        const availableModifiers = `Thiqa=${codeModifiers.thiqa}, Low-End=${codeModifiers.lowEnd}, Basic=${codeModifiers.basic}`;
+        return {
+            status: 'Mismatch',
+            expectedPrice: basePrice * codeModifiers.thiqa * quantity,
+            matchedModifier: 'No modifier matched',
+            category: codeType,
+            reason: `Price doesn't match any modifier (${availableModifiers})`
+        };
     }
-    
-    // No match found
-    return {
-        status: 'Mismatch',
-        expectedPrice: basePrice * codeModifiers.thiqa,
-        matchedModifier: null,
-        category: codeType
+}
+
+// Helper function to get modifier display name
+function getModifierName(modifierType) {
+    const names = {
+        'thiqa': 'Thiqa',
+        'lowEnd': 'Low-End',
+        'basic': 'Basic'
     };
+    return names[modifierType] || modifierType;
 }
 
 // Export results to Excel
@@ -600,7 +847,8 @@ function exportToExcel() {
             'Clinician': claim.clinician,
             'Expected Price': result.expectedPrice !== null ? result.expectedPrice : 'N/A',
             'Modifier': result.matchedModifier || 'N/A',
-            'Status': result.status
+            'Status': result.status,
+            'Reason': result.reason || '-'
         };
     });
     
