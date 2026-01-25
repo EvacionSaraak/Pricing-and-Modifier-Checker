@@ -304,9 +304,10 @@ function renderModifiers() {
     
     // Determine which modifier is active globally (if all categories use the same one)
     const modifierValues = Object.values(activeModifiers);
-    const allSameThiqa = modifierValues.every(v => v === 'thiqa');
-    const allSameLowEnd = modifierValues.every(v => v === 'lowEnd');
-    const allSameBasic = modifierValues.every(v => v === 'basic');
+    const hasValues = modifierValues.length > 0;
+    const allSameThiqa = hasValues && modifierValues.every(v => v === 'thiqa');
+    const allSameLowEnd = hasValues && modifierValues.every(v => v === 'lowEnd');
+    const allSameBasic = hasValues && modifierValues.every(v => v === 'basic');
     
     const tableHTML = `
         <table class="modifiers-table">
@@ -407,9 +408,9 @@ function loadModifierSettings() {
 function setDefaultModifierSettings() {
     activeModifiers = {
         'Medical': 'thiqa',
-        'Radiology': 'lowEnd',
-        'Laboratory': 'lowEnd',
-        'Physiotherapy': 'lowEnd',
+        'Radiology': 'thiqa',
+        'Laboratory': 'thiqa',
+        'Physiotherapy': 'thiqa',
         'OP E&M': 'thiqa'
     };
 }
