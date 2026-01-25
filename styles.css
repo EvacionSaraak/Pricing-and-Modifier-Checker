@@ -156,28 +156,16 @@ body {
 
 /* Modifiers Tab Styling */
 .modifiers-content {
-    padding: 30px;
-    max-width: 1200px;
     margin: 0 auto;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+    width: 120vh;
 }
 
 #modifierResultsContainer {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
     margin-top: 20px;
 }
 
 #modifierResultsContainer .table-responsive {
-    flex: 1;
-    min-height: 0;
+    max-height: 55vh;
     overflow-y: auto;
     position: relative;
 }
