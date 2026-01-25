@@ -32,16 +32,30 @@ function validateModifiers(xmlRecords, eligibilityData) {
         }
         
         // Check 2: Modifier 24 needs VOI_D, Modifier 52 needs VOI_EF1
-        if (record.modifier === '24' && record.value !== 'VOI_D' && record.value !== '24') {
+        const voiNorm = normalizeVOI(record.value);
+        if (record.modifier === '24' && voiNorm !== 'VOID' && voiNorm !== '24') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 24 requires VOI_D or 24, found "${record.value}"`);
-        } else if (record.modifier === '52' && record.value !== 'VOI_EF1' && record.value !== '52') {
+        } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 52 requires VOI_EF1 or 52, found "${record.value}"`);
         }
         
         // Check 3: Eligibility match must exist
-        const eligibilityMatch = eligibilityData.index[key];
+        const eligibilityMatches = eligibilityData.index[key];
+        let eligibilityMatch = null;
+        
+        if (eligibilityMatches && eligibilityMatches.length > 0) {
+            // Find first unused eligibility record
+            eligibilityMatch = eligibilityMatches.find(e => !e._used);
+            if (eligibilityMatch) {
+                eligibilityMatch._used = true; // Mark as used
+            } else {
+                // All matches already used, just use the first one
+                eligibilityMatch = eligibilityMatches[0];
+            }
+        }
+        
         if (!eligibilityMatch) {
             validationResult.isValid = false;
             validationResult.remarks.push('No eligibility match found');
@@ -61,6 +75,11 @@ function validateModifiers(xmlRecords, eligibilityData) {
     }
     
     return validatedRecords;
+}
+
+// Helper to normalize VOI for comparison
+function normalizeVOI(voi) {
+    return String(voi || '').toUpperCase().replace(/[_\s]/g, '');
 }
 
 // Get validation statistics
