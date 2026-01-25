@@ -61,15 +61,27 @@ function parseModifierXML(xmlContent) {
                     return;
                 }
                 
-                // Only accept valid VOI values
+                // Determine modifier based on VOI value
                 let modifier = '';
                 const voiNorm = (voiVal || '').toUpperCase().replace(/[_\s]/g, '');
                 if (voiNorm === 'VOID' || voiNorm === '24') {
                     modifier = '24';
                 } else if (voiNorm === 'VOIEF1' || voiNorm === '52') {
                     modifier = '52';
+                } else if (code.toLowerCase() === 'cpt modifier') {
+                    // For CPT modifier observations with non-standard VOI values,
+                    // try to infer the intended modifier from the VOI value pattern
+                    // This allows the validator to properly detect and report VOI mismatches
+                    if (voiNorm.includes('D') || voiNorm === 'VOI') {
+                        modifier = '24'; // Likely intended for modifier 24
+                    } else if (voiNorm.includes('EF') || voiNorm.includes('E') || voiNorm.includes('F')) {
+                        modifier = '52'; // Likely intended for modifier 52
+                    } else {
+                        // Unknown pattern - skip this observation
+                        return;
+                    }
                 } else {
-                    return; // skip anything else
+                    return; // skip observations that aren't CPT modifiers
                 }
                 
                 results.push({
