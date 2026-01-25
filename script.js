@@ -1,3 +1,30 @@
+// Tab Switching Function
+function switchTab(tabName) {
+    // Hide all content sections
+    const sections = document.querySelectorAll('.content-section');
+    sections.forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    const tabs = document.querySelectorAll('.nav-link');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show the selected content section
+    const selectedContent = document.getElementById(tabName + '-content');
+    if (selectedContent) {
+        selectedContent.classList.add('active');
+    }
+    
+    // Add active class to the clicked tab button
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+}
+
 // Constants
 const MAX_SEARCH_RESULTS = 50; // Maximum number of search results to display
 

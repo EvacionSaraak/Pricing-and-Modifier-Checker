@@ -38,21 +38,12 @@ body {
     border-bottom: 3px solid #0d6efd;
 }
 
-.tab-content {
-    flex: 1 0 auto;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 0;
-    border: none;
-    margin: 0; /* Remove any margins */
-}
-
-.tab-pane.show {
+.page-content {
     flex: 1;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    overflow: auto;
+    padding: 0;
 }
 
 .content-wrapper {
@@ -166,6 +157,7 @@ body {
     margin: 0 auto;
     overflow-y: auto;
     flex: 1;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
 }

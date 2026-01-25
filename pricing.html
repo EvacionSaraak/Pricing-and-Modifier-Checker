@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Checker - Daman Thiqa</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header-bar">
+            <h1 class="h3 mb-0"><i class="bi bi-calculator"></i> Pricing Checker - Daman Thiqa</h1>
+        </div>
+        
+        <!-- Navigation Bar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="pricing.html">
+                            <i class="bi bi-calculator"></i> Pricing
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="modifiers.html">
+                            <i class="bi bi-sliders"></i> Modifiers
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        
+        <!-- Pricing Content -->
+        <div class="page-content">
+            <div class="content-wrapper">
+            <!-- Left Sidebar - Upload, Modifiers, and Search -->
+            <div class="left-sidebar" id="leftSidebar">
+                <!-- Resize Handle -->
+                <div class="resize-handle" id="resizeHandle"></div>
+                
+                <!-- XML Upload Section -->
+                <h5 class="mb-3">Upload XML Claims</h5>
+                <div class="mb-3">
+                    <label for="xmlFile" class="form-label">XML File</label>
+                    <input type="file" class="form-control" id="xmlFile" accept=".xml">
+                </div>
+                <div class="row g-2 mb-4">
+                    <div class="col-4">
+                        <button class="btn btn-primary w-100" onclick="processXML()">
+                            <i class="bi bi-gear-fill"></i> Process
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#filterModal">
+                            <i class="bi bi-funnel"></i> Filter
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-success w-100" onclick="exportToExcel()" id="exportBtn">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Export
+                        </button>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <h5 class="mb-3">Price Modifiers</h5>
+                <div id="modifiersList" class="mb-4">
+                    <!-- Modifiers table will be dynamically populated here -->
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Price List Search Section -->
+                <h5 class="mb-3">Price List Search</h5>
+                <div class="mb-3">
+                    <label for="priceSearch" class="form-label">Search by Code or Description</label>
+                    <input type="text" class="form-control" id="priceSearch" placeholder="Type to search..." oninput="searchPrices()">
+                </div>
+                <div id="pricelistStatus" class="alert alert-info" style="display:none;"></div>
+                
+                <!-- Price Search Results -->
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-striped table-hover table-sm" id="priceSearchResults">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 80px;">Code</th>
+                                <th style="width: 100px;">Description</th>
+                                <th style="width: 70px;">Base</th>
+                                <th style="width: 70px;">Thiqa</th>
+                                <th style="width: 70px;">Low-End</th>
+                                <th style="width: 70px;">Basic</th>
+                            </tr>
+                        </thead>
+                        <tbody id="priceSearchBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    Type to search...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Right Content Area - Claims Processing Results Only -->
+            <div class="right-content">
+                <!-- Results Section -->
+                <div class="results-section" id="resultsTable">
+                    <h5 class="mb-3">Processing Results</h5>
+                    <div id="summarySection" class="mb-3"></div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="resultsTableData">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>CLAIM ID</th>
+                                    <th>Clinician</th>
+                                    <th>TYPE</th>
+                                    <th>CODE</th>
+                                    <th>CATEGORY</th>
+                                    <th>Modifier</th>
+                                    <th>QUANTITY</th>
+                                    <th>NET</th>
+                                    <th>Expected Price</th>
+                                    <th>Status</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                                <!-- Results will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        <!-- End Pricing Content -->
+    </div>
+    
+    <!-- Modal for Description -->
+    <div class="modal fade" id="descriptionModal" tabindex="-1" aria-labelledby="descriptionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="descriptionModalLabel">Price Description</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Code:</strong> <span id="modalCode"></span></p>
+                    <p><strong>Description:</strong> <span id="modalDescription"></span></p>
+                    <p><strong>Base Price:</strong> <span id="modalBasePrice"></span></p>
+                    <hr>
+                    <h6>Prices with Modifiers:</h6>
+                    <div id="modalModifierPrices"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Filter -->
+    <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel"><i class="bi bi-funnel"></i> Filter Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Select which statuses to display:</p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterMatch" checked onchange="updateStatusFilter('Match', this.checked)">
+                        <label class="form-check-label" for="filterMatch">
+                            <span class="badge bg-success">Match</span> Show matching claims
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterMismatch" checked onchange="updateStatusFilter('Mismatch', this.checked)">
+                        <label class="form-check-label" for="filterMismatch">
+                            <span class="badge bg-danger">Mismatch</span> Show mismatching claims
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterNotFound" checked onchange="updateStatusFilter('Not Found', this.checked)">
+                        <label class="form-check-label" for="filterNotFound">
+                            <span class="badge bg-warning">Not Found</span> Show codes not in price list
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="filterError" checked onchange="updateStatusFilter('Error', this.checked)">
+                        <label class="form-check-label" for="filterError">
+                            <span class="badge bg-dark">Error</span> Show invalid codes (00000)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="selectAllFilters()">Select All</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearAllFilters()">Clear All</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Eligibility Details Modal -->
+    <div class="modal fade" id="eligibilityModal" tabindex="-1" aria-labelledby="eligibilityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eligibilityModalLabel">Eligibility Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="eligibilityModalBody">
+                    <!-- Details will be populated dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+    <script src="modifiers-xml-parser.js"></script>
+    <script src="modifiers-excel-parser.js"></script>
+    <script src="modifiers-validator.js"></script>
+    <script src="modifiers-ui.js"></script>
+</body>
+</html>
