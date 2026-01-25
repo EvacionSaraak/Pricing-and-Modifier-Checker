@@ -362,7 +362,7 @@ function updateModifier(index, field, value) {
 // Update modifier display values in the Modifiers tab
 function updateModifierDisplayValues() {
     modifiers.forEach(modifier => {
-        const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace('&', '');
+        const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace(/&/g, '');
         const thiqaEl = document.getElementById(`${type}-thiqa-value`);
         const lowEndEl = document.getElementById(`${type}-lowend-value`);
         const basicEl = document.getElementById(`${type}-basic-value`);
@@ -383,7 +383,7 @@ function loadModifierSettings() {
             
             // Apply saved settings to radio buttons
             for (const [category, modifierType] of Object.entries(activeModifiers)) {
-                const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-${modifierType}`;
+                const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace(/&/g, '')}-${modifierType}`;
                 const radio = document.getElementById(radioId);
                 if (radio) {
                     radio.checked = true;
@@ -438,7 +438,7 @@ function saveModifierSettings() {
     const categories = ['Medical', 'Radiology', 'Laboratory', 'Physiotherapy', 'OP E&M'];
     
     categories.forEach(category => {
-        const radioName = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-modifier`;
+        const radioName = `${category.toLowerCase().replace(/\s+/g, '').replace(/&/g, '')}-modifier`;
         const selected = document.querySelector(`input[name="${radioName}"]:checked`);
         if (selected) {
             activeModifiers[category] = selected.value;
