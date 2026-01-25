@@ -22,7 +22,7 @@ async function runModifierCheck() {
         const xmlRecords = parseModifierXML(xmlContent);
         
         if (xmlRecords.length === 0) {
-            showModifierStatus('No modifier records found in XML file', 'warning');
+            showModifierStatus('No modifier records found in XML file. Total claims parsed: 0', 'warning');
             return;
         }
         
@@ -30,8 +30,9 @@ async function runModifierCheck() {
         const excelContent = await readFileAsBinary(excelFile);
         const eligibilityData = parseModifierExcel(excelContent);
         
-        if (Object.keys(eligibilityData.index).length === 0) {
-            showModifierStatus('No eligibility records found in Excel file', 'warning');
+        const eligibilityCount = Object.keys(eligibilityData.index).length;
+        if (eligibilityCount === 0) {
+            showModifierStatus(`No eligibility records found in Excel file. Total claims parsed: ${xmlRecords.length}, Total eligibilities: 0`, 'warning');
             return;
         }
         
@@ -39,7 +40,7 @@ async function runModifierCheck() {
         modifierValidationResults = validateModifiers(xmlRecords, eligibilityData);
         
         if (modifierValidationResults.length === 0) {
-            showModifierStatus('No records matched the filter criteria (PayerID A001 or E001)', 'warning');
+            showModifierStatus(`No records matched the filter criteria (PayerID A001 or E001). Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
             return;
         }
         
