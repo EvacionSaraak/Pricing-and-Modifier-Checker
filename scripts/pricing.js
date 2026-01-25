@@ -302,14 +302,26 @@ function showDescriptionModal(code, description, basePrice) {
 function renderModifiers() {
     const container = document.getElementById('modifiersList');
     
+    // Determine which modifier is active globally (if all categories use the same one)
+    const modifierValues = Object.values(activeModifiers);
+    const allSameThiqa = modifierValues.every(v => v === 'thiqa');
+    const allSameLowEnd = modifierValues.every(v => v === 'lowEnd');
+    const allSameBasic = modifierValues.every(v => v === 'basic');
+    
     const tableHTML = `
         <table class="modifiers-table">
             <thead>
                 <tr>
                     <th>Type</th>
-                    <th>Thiqa</th>
-                    <th>Low-End</th>
-                    <th>Basic</th>
+                    <th class="modifier-column-header ${allSameThiqa ? 'selected-modifier' : ''}" 
+                        data-modifier="thiqa" 
+                        onclick="selectModifierForAllCategories('thiqa')">Thiqa</th>
+                    <th class="modifier-column-header ${allSameLowEnd ? 'selected-modifier' : ''}" 
+                        data-modifier="lowEnd" 
+                        onclick="selectModifierForAllCategories('lowEnd')">Low-End</th>
+                    <th class="modifier-column-header ${allSameBasic ? 'selected-modifier' : ''}" 
+                        data-modifier="basic" 
+                        onclick="selectModifierForAllCategories('basic')">Basic</th>
                 </tr>
             </thead>
             <tbody>
@@ -318,26 +330,17 @@ function renderModifiers() {
                     return `
                     <tr data-category="${mod.type}">
                         <td><strong>${mod.type}</strong></td>
-                        <td class="modifier-header-cell ${activeModifier === 'thiqa' ? 'selected-modifier' : ''}" 
-                            data-modifier="thiqa" 
-                            onclick="selectModifierForCategory('${mod.type}', 'thiqa')">
+                        <td class="${activeModifier === 'thiqa' ? 'selected-modifier' : ''}">
                             <input type="number" step="0.01" value="${mod.thiqa}" 
-                                   onchange="updateModifier(${index}, 'thiqa', this.value)" 
-                                   onclick="event.stopPropagation()">
+                                   onchange="updateModifier(${index}, 'thiqa', this.value)">
                         </td>
-                        <td class="modifier-header-cell ${activeModifier === 'lowEnd' ? 'selected-modifier' : ''}" 
-                            data-modifier="lowEnd" 
-                            onclick="selectModifierForCategory('${mod.type}', 'lowEnd')">
+                        <td class="${activeModifier === 'lowEnd' ? 'selected-modifier' : ''}">
                             <input type="number" step="0.01" value="${mod.lowEnd}" 
-                                   onchange="updateModifier(${index}, 'lowEnd', this.value)" 
-                                   onclick="event.stopPropagation()">
+                                   onchange="updateModifier(${index}, 'lowEnd', this.value)">
                         </td>
-                        <td class="modifier-header-cell ${activeModifier === 'basic' ? 'selected-modifier' : ''}" 
-                            data-modifier="basic" 
-                            onclick="selectModifierForCategory('${mod.type}', 'basic')">
+                        <td class="${activeModifier === 'basic' ? 'selected-modifier' : ''}">
                             <input type="number" step="0.01" value="${mod.basic}" 
-                                   onchange="updateModifier(${index}, 'basic', this.value)" 
-                                   onclick="event.stopPropagation()">
+                                   onchange="updateModifier(${index}, 'basic', this.value)">
                         </td>
                     </tr>
                 `;
@@ -411,10 +414,12 @@ function setDefaultModifierSettings() {
     };
 }
 
-// Select modifier for a specific category
-function selectModifierForCategory(category, modifierType) {
-    // Update the active modifier for this category
-    activeModifiers[category] = modifierType;
+// Select modifier for all categories
+function selectModifierForAllCategories(modifierType) {
+    // Update the active modifier for all categories
+    modifiers.forEach(mod => {
+        activeModifiers[mod.type] = modifierType;
+    });
     
     // Save to localStorage with error handling
     try {
