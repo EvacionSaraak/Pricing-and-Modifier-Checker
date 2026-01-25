@@ -57,8 +57,8 @@ function validateModifiers(xmlRecords, eligibilityData) {
         // Check 3: Modifier VOI compatibility
         // Use VOI from eligibility data if available, otherwise fall back to XML observation value
         let voiToCheck = '';
-        if (eligibilityMatch && eligibilityMatch['VOI Number']) {
-            voiToCheck = String(eligibilityMatch['VOI Number']).trim();
+        if (eligibilityMatch && eligibilityMatch.voiNumber) {
+            voiToCheck = String(eligibilityMatch.voiNumber).trim();
         } else {
             voiToCheck = record.value || '';
         }
