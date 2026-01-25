@@ -323,6 +323,18 @@ body {
     font-weight: 600;
 }
 
+#modifierResultsTable thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#modifierResultsTable thead th {
+    background-color: #212529;
+    color: white;
+    border-bottom: 2px solid #dee2e6;
+}
+
 #modifierResultsTable tbody tr.valid-row {
     background-color: #d1e7dd;
 }
