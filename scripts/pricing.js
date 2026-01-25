@@ -413,6 +413,13 @@ function setDefaultModifierSettings() {
         'Physiotherapy': 'thiqa',
         'OP E&M': 'thiqa'
     };
+    
+    // Save defaults to localStorage
+    try {
+        localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    } catch (e) {
+        console.warn('Failed to save default modifier settings to localStorage:', e);
+    }
 }
 
 // Select modifier for all categories
