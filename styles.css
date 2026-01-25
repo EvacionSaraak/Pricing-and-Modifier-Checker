@@ -146,18 +146,13 @@ body {
     position: sticky;
     left: 50%;
     transform: translateX(-50%);
-    width: 40px;
-    height: 40px;
-    background-color: rgba(13, 110, 253, 0.9);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 0;
+    height: 0;
     z-index: 20;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 .scroll-indicator.show {
@@ -166,28 +161,18 @@ body {
 
 .scroll-indicator-top {
     top: 10px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 20px solid rgba(13, 110, 253, 0.9);
     animation: bounce-up 1.5s ease-in-out infinite;
 }
 
 .scroll-indicator-bottom {
     bottom: 10px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 20px solid rgba(13, 110, 253, 0.9);
     animation: bounce-down 1.5s ease-in-out infinite;
-}
-
-.scroll-indicator::after {
-    content: '';
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-}
-
-.scroll-indicator-top::after {
-    border-bottom: 10px solid white;
-}
-
-.scroll-indicator-bottom::after {
-    border-top: 10px solid white;
 }
 
 @keyframes bounce-up {
