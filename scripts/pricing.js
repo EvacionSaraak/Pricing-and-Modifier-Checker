@@ -159,7 +159,7 @@ function getModifiersForCode(code) {
 // Load Prices.xlsx on startup
 async function loadPricesXLSX() {
     try {
-        const response = await fetch('Prices.xlsx');
+        const response = await fetch('../Prices.xlsx');
         if (response.ok) {
             const arrayBuffer = await response.arrayBuffer();
             const data = new Uint8Array(arrayBuffer);
