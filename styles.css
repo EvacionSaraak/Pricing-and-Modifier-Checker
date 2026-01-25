@@ -134,6 +134,42 @@ body {
     min-height: 0;
     overflow-y: auto;
     position: relative;
+    scrollbar-width: none;
+}
+
+.table-responsive::-webkit-scrollbar {
+    display: none;
+}
+
+.table-responsive::before,
+.table-responsive::after {
+    content: '';
+    position: sticky;
+    left: 0;
+    right: 0;
+    height: 15px;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.3s;
+}
+
+.table-responsive::before {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.15), transparent);
+    opacity: 0;
+}
+
+.table-responsive::after {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.15), transparent);
+}
+
+.table-responsive.scrolled-top::before {
+    opacity: 1;
+}
+
+.table-responsive.scrolled-bottom::after {
+    opacity: 0;
 }
 
 .table-responsive thead {
