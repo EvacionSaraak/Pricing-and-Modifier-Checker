@@ -132,6 +132,7 @@ function getCodeType(code) {
     
     // Medical starts with 1, 2, 3, 4, 5, and 6
     if (/^[1-6]/.test(codeStr)) return 'Medical';
+    if (codeStr.startsWith('96')) return 'Medical';
     
     // Radiology starts with 7
     if (codeStr.startsWith('7')) return 'Radiology';
