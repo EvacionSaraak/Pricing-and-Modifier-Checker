@@ -259,3 +259,66 @@ function escapeHtml(text) {
     div.textContent = String(text);
     return div.innerHTML;
 }
+
+// Get validation statistics
+function getValidationStats(results) {
+    const stats = {
+        total: results.length,
+        valid: 0,
+        invalid: 0
+    };
+    
+    results.forEach(record => {
+        if (record.isValid) {
+            stats.valid++;
+        } else {
+            stats.invalid++;
+        }
+    });
+    
+    return stats;
+}
+
+// Initialize resize handle for sidebar
+function initializeResizeHandle() {
+    const resizeHandle = document.getElementById('resizeHandle');
+    const sidebar = document.getElementById('leftSidebar');
+    
+    if (!resizeHandle || !sidebar) return;
+    
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    
+    resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(window.getComputedStyle(sidebar).width, 10);
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const width = startWidth + (e.clientX - startX);
+        const minWidth = 300;
+        const maxWidth = 800;
+        
+        if (width >= minWidth && width <= maxWidth) {
+            sidebar.style.width = width + 'px';
+        }
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+        }
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeResizeHandle();
+});

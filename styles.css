@@ -3,7 +3,7 @@ body {
     background-color: #f8f9fa;
     margin: 0;
     padding: 0;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .main-container {
@@ -87,6 +87,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
     padding: 20px;
 }
 
@@ -125,6 +126,7 @@ body {
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+    min-height: 0;
 }
 
 .table-responsive {
@@ -132,6 +134,63 @@ body {
     min-height: 0;
     overflow-y: auto;
     position: relative;
+    scrollbar-width: none;
+}
+
+.table-responsive::-webkit-scrollbar {
+    display: none;
+}
+
+/* Scroll indicator arrows */
+.scroll-indicator {
+    position: sticky;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.scroll-indicator.show {
+    opacity: 1;
+}
+
+.scroll-indicator-top {
+    top: 10px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 20px solid rgba(13, 110, 253, 0.9);
+    animation: bounce-up 1.5s ease-in-out infinite;
+}
+
+.scroll-indicator-bottom {
+    bottom: 10px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 20px solid rgba(13, 110, 253, 0.9);
+    animation: bounce-down 1.5s ease-in-out infinite;
+}
+
+@keyframes bounce-up {
+    0%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(-8px);
+    }
+}
+
+@keyframes bounce-down {
+    0%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(8px);
+    }
 }
 
 .table-responsive thead {
@@ -155,17 +214,14 @@ body {
 }
 
 /* Modifiers Tab Styling */
-.modifiers-content {
-    margin: 0 auto;
-    width: 120vh;
-}
-
 #modifierResultsContainer {
-    margin-top: 20px;
+    display: flex !important;
+    flex-direction: column;
 }
 
 #modifierResultsContainer .table-responsive {
-    max-height: 55vh;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     position: relative;
 }
@@ -206,23 +262,6 @@ body {
 .modifier-radio-group .form-check-label {
     font-size: 0.95rem;
     color: #495057;
-}
-
-.modifier-actions {
-    display: flex;
-    gap: 15px;
-    padding-top: 20px;
-    border-top: 2px solid #dee2e6;
-}
-
-.modifier-actions .btn {
-    min-width: 150px;
-}
-
-
-.btn-process {
-    font-size: 1.1rem;
-    padding: 10px 30px;
 }
 
 #resultsTable {
@@ -318,19 +357,6 @@ body {
 }
 
 /* CPT Modifiers Validation Checker Styles */
-.modifier-upload-card {
-    background-color: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.modifier-upload-card h5 {
-    color: #0d6efd;
-    font-weight: 600;
-}
-
 #modifierResultsTable thead {
     position: sticky;
     top: 0;
