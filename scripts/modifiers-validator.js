@@ -66,10 +66,10 @@ function validateModifiers(xmlRecords, eligibilityData) {
         const voiNorm = normalizeVOI(voiToCheck);
         if (record.modifier === '24' && voiNorm !== 'VOID' && voiNorm !== '24') {
             validationResult.isValid = false;
-            validationResult.remarks.push(`Modifier 24 does not match VOI (expected VOI_D).`);
+            validationResult.remarks.push(`Modifier 24 does not match VOI (expected VOI_D)`);
         } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
             validationResult.isValid = false;
-            validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1).`);
+            validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
         }
         
         // Set final remarks as string
