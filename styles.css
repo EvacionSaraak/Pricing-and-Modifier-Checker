@@ -87,6 +87,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
     padding: 20px;
 }
 
@@ -125,6 +126,7 @@ body {
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+    min-height: 0;
 }
 
 .table-responsive {
@@ -161,10 +163,10 @@ body {
 }
 
 #modifierResultsContainer .table-responsive {
-    overflow-y: auto;
-    position: relative;
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
+    position: relative;
 }
 
 .modifier-selection-grid {
