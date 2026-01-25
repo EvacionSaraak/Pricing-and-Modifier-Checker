@@ -302,25 +302,50 @@ function showDescriptionModal(code, description, basePrice) {
 function renderModifiers() {
     const container = document.getElementById('modifiersList');
     
+    // Determine which modifier is active globally (if all categories use the same one)
+    const modifierValues = Object.values(activeModifiers);
+    const hasValues = modifierValues.length > 0;
+    const allSameThiqa = hasValues && modifierValues.every(v => v === 'thiqa');
+    const allSameLowEnd = hasValues && modifierValues.every(v => v === 'lowEnd');
+    const allSameBasic = hasValues && modifierValues.every(v => v === 'basic');
+    
     const tableHTML = `
         <table class="modifiers-table">
             <thead>
                 <tr>
                     <th>Type</th>
-                    <th>Thiqa</th>
-                    <th>Low-End</th>
-                    <th>Basic</th>
+                    <th class="modifier-column-header ${allSameThiqa ? 'selected-modifier' : ''}" 
+                        data-modifier="thiqa" 
+                        onclick="selectModifierForAllCategories('thiqa')">Thiqa</th>
+                    <th class="modifier-column-header ${allSameLowEnd ? 'selected-modifier' : ''}" 
+                        data-modifier="lowEnd" 
+                        onclick="selectModifierForAllCategories('lowEnd')">Low-End</th>
+                    <th class="modifier-column-header ${allSameBasic ? 'selected-modifier' : ''}" 
+                        data-modifier="basic" 
+                        onclick="selectModifierForAllCategories('basic')">Basic</th>
                 </tr>
             </thead>
             <tbody>
-                ${modifiers.map((mod, index) => `
-                    <tr>
+                ${modifiers.map((mod, index) => {
+                    const activeModifier = activeModifiers[mod.type] || null;
+                    return `
+                    <tr data-category="${mod.type}">
                         <td><strong>${mod.type}</strong></td>
-                        <td><input type="number" step="0.01" value="${mod.thiqa}" onchange="updateModifier(${index}, 'thiqa', this.value)"></td>
-                        <td><input type="number" step="0.01" value="${mod.lowEnd}" onchange="updateModifier(${index}, 'lowEnd', this.value)"></td>
-                        <td><input type="number" step="0.01" value="${mod.basic}" onchange="updateModifier(${index}, 'basic', this.value)"></td>
+                        <td class="${activeModifier === 'thiqa' ? 'selected-modifier' : ''}">
+                            <input type="number" step="0.01" value="${mod.thiqa}" 
+                                   onchange="updateModifier(${index}, 'thiqa', this.value)">
+                        </td>
+                        <td class="${activeModifier === 'lowEnd' ? 'selected-modifier' : ''}">
+                            <input type="number" step="0.01" value="${mod.lowEnd}" 
+                                   onchange="updateModifier(${index}, 'lowEnd', this.value)">
+                        </td>
+                        <td class="${activeModifier === 'basic' ? 'selected-modifier' : ''}">
+                            <input type="number" step="0.01" value="${mod.basic}" 
+                                   onchange="updateModifier(${index}, 'basic', this.value)">
+                        </td>
                     </tr>
-                `).join('')}
+                `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -341,7 +366,7 @@ function updateModifier(index, field, value) {
 // Update modifier display values in the Modifiers tab
 function updateModifierDisplayValues() {
     modifiers.forEach(modifier => {
-        const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace('&', '');
+        const type = modifier.type.toLowerCase().replace(/\s+/g, '').replace(/&/g, '');
         const thiqaEl = document.getElementById(`${type}-thiqa-value`);
         const lowEndEl = document.getElementById(`${type}-lowend-value`);
         const basicEl = document.getElementById(`${type}-basic-value`);
@@ -355,33 +380,73 @@ function updateModifierDisplayValues() {
 
 // Load modifier settings from localStorage
 function loadModifierSettings() {
-    const saved = localStorage.getItem('activeModifiers');
-    if (saved) {
-        activeModifiers = JSON.parse(saved);
-        
-        // Apply saved settings to radio buttons
-        for (const [category, modifierType] of Object.entries(activeModifiers)) {
-            const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-${modifierType}`;
-            const radio = document.getElementById(radioId);
-            if (radio) {
-                radio.checked = true;
+    try {
+        const saved = localStorage.getItem('activeModifiers');
+        if (saved) {
+            activeModifiers = JSON.parse(saved);
+            
+            // Apply saved settings to radio buttons
+            for (const [category, modifierType] of Object.entries(activeModifiers)) {
+                const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace(/&/g, '')}-${modifierType}`;
+                const radio = document.getElementById(radioId);
+                if (radio) {
+                    radio.checked = true;
+                }
             }
+        } else {
+            // Set defaults
+            setDefaultModifierSettings();
         }
-    } else {
-        // Set defaults
+    } catch (e) {
+        console.warn('Failed to load modifier settings from localStorage:', e);
+        // Fall back to defaults if localStorage fails
         setDefaultModifierSettings();
     }
+    
+    // Re-render modifiers table to apply visual selection
+    renderModifiers();
 }
 
 // Set default modifier settings
 function setDefaultModifierSettings() {
     activeModifiers = {
         'Medical': 'thiqa',
-        'Radiology': 'lowEnd',
-        'Laboratory': 'lowEnd',
-        'Physiotherapy': 'lowEnd',
+        'Radiology': 'thiqa',
+        'Laboratory': 'thiqa',
+        'Physiotherapy': 'thiqa',
         'OP E&M': 'thiqa'
     };
+    
+    // Save defaults to localStorage
+    try {
+        localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    } catch (e) {
+        console.warn('Failed to save default modifier settings to localStorage:', e);
+    }
+}
+
+// Select modifier for all categories
+function selectModifierForAllCategories(modifierType) {
+    // Update the active modifier for all categories
+    modifiers.forEach(mod => {
+        activeModifiers[mod.type] = modifierType;
+    });
+    
+    // Save to localStorage with error handling
+    try {
+        localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    } catch (e) {
+        console.warn('Failed to save modifier selection to localStorage:', e);
+        // Continue execution even if localStorage fails
+    }
+    
+    // Re-render the modifiers table to update visual selection
+    renderModifiers();
+    
+    // Re-render results if claims are already processed
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
 }
 
 // Save modifier settings to localStorage
@@ -389,16 +454,20 @@ function saveModifierSettings() {
     const categories = ['Medical', 'Radiology', 'Laboratory', 'Physiotherapy', 'OP E&M'];
     
     categories.forEach(category => {
-        const radioName = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-modifier`;
+        const radioName = `${category.toLowerCase().replace(/\s+/g, '').replace(/&/g, '')}-modifier`;
         const selected = document.querySelector(`input[name="${radioName}"]:checked`);
         if (selected) {
             activeModifiers[category] = selected.value;
         }
     });
     
-    localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
-    
-    alert('Modifier settings saved successfully!');
+    try {
+        localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+        alert('Modifier settings saved successfully!');
+    } catch (e) {
+        console.warn('Failed to save modifier settings to localStorage:', e);
+        alert('Warning: Settings could not be saved (storage may be full or disabled).');
+    }
     
     // Re-render results if claims are already processed
     if (processedClaims.length > 0) {
