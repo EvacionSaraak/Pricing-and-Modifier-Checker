@@ -4,34 +4,43 @@
 function parseModifierExcel(fileData) {
     const workbook = XLSX.read(fileData, { type: 'binary' });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+    
+    // Read with range starting from row 2 (index 1) where headers are located
+    const data = XLSX.utils.sheet_to_json(firstSheet, { 
+        header: 1,
+        range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
+    });
     
     if (data.length < 2) {
         throw new Error('Excel file is empty or has no data rows');
     }
     
-    // Find column indices
+    // Headers are now in data[0] (which is the second row of the Excel file)
     const headers = data[0];
-    const cardNumberCol = findColumnIndex(headers, ['Card Number', 'DHA Member ID']);
+    
+    // Find column indices - look for the exact column name with slash
+    const cardNumberCol = findColumnIndex(headers, ['Card Number / DHA Member ID', 'Card Number', 'DHA Member ID']);
     const orderedOnCol = findColumnIndex(headers, ['Ordered On']);
     const clinicianCol = findColumnIndex(headers, ['Clinician']);
     const voiNumberCol = findColumnIndex(headers, ['VOI Number']);
     
     if (cardNumberCol === -1 || orderedOnCol === -1 || clinicianCol === -1 || voiNumberCol === -1) {
-        throw new Error('Required columns not found in Excel file. Expected: Card Number/DHA Member ID, Ordered On, Clinician, VOI Number');
+        throw new Error('Required columns not found in Excel file. Expected: Card Number / DHA Member ID, Ordered On, Clinician, VOI Number');
     }
     
     // Build eligibility index
     const eligibilityIndex = {};
     const eligibilityRecords = [];
     
+    // Start from row 1 (data rows start after headers)
     for (let i = 1; i < data.length; i++) {
         const row = data[i];
         if (!row || row.length === 0) continue;
         
-        const memberID = normalizeMemberID(String(row[cardNumberCol] || ''));
+        const memberIDRaw = String(row[cardNumberCol] || '');
+        const memberID = normalizeMemberID(memberIDRaw);
         const orderedOn = normalizeDate(row[orderedOnCol]);
-        const clinician = String(row[clinicianCol] || '').trim();
+        const clinician = String(row[clinicianCol] || '').trim().toUpperCase();
         const voiNumber = String(row[voiNumberCol] || '').trim();
         
         if (!memberID || !orderedOn || !clinician) continue;
@@ -44,12 +53,17 @@ function parseModifierExcel(fileData) {
             date: orderedOn,
             clinician: clinician,
             voiNumber: voiNumber,
-            originalMemberID: String(row[cardNumberCol] || ''),
+            originalMemberID: memberIDRaw,
             originalDate: row[orderedOnCol]
         };
         
         eligibilityRecords.push(record);
-        eligibilityIndex[key] = record;
+        
+        // Store in index - allow multiple records with same key
+        if (!eligibilityIndex[key]) {
+            eligibilityIndex[key] = [];
+        }
+        eligibilityIndex[key].push(record);
     }
     
     return {
