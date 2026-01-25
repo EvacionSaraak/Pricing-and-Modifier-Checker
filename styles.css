@@ -296,6 +296,39 @@ body {
     font-size: 0.85rem;
 }
 
+/* Modifier header cell clickable styling */
+.modifier-header-cell {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.modifier-header-cell:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Selected modifier glow effect */
+.modifier-header-cell.selected-modifier {
+    background-color: rgba(13, 110, 253, 0.2);
+    box-shadow: 0 0 10px rgba(13, 110, 253, 0.6), 
+                inset 0 0 10px rgba(13, 110, 253, 0.3);
+    border-color: #0d6efd;
+    animation: gentle-glow 2s ease-in-out infinite;
+}
+
+/* Gentle pulsing glow animation */
+@keyframes gentle-glow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(13, 110, 253, 0.6), 
+                    inset 0 0 10px rgba(13, 110, 253, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(13, 110, 253, 0.8), 
+                    inset 0 0 15px rgba(13, 110, 253, 0.4);
+    }
+}
+
+
 /* Status badge styling - applied to spans in Status column only */
 .status-badge.match-success {
     background-color: #d1e7dd;

@@ -313,14 +313,35 @@ function renderModifiers() {
                 </tr>
             </thead>
             <tbody>
-                ${modifiers.map((mod, index) => `
-                    <tr>
+                ${modifiers.map((mod, index) => {
+                    const activeModifier = activeModifiers[mod.type] || null;
+                    return `
+                    <tr data-category="${mod.type}">
                         <td><strong>${mod.type}</strong></td>
-                        <td><input type="number" step="0.01" value="${mod.thiqa}" onchange="updateModifier(${index}, 'thiqa', this.value)"></td>
-                        <td><input type="number" step="0.01" value="${mod.lowEnd}" onchange="updateModifier(${index}, 'lowEnd', this.value)"></td>
-                        <td><input type="number" step="0.01" value="${mod.basic}" onchange="updateModifier(${index}, 'basic', this.value)"></td>
+                        <td class="modifier-header-cell ${activeModifier === 'thiqa' ? 'selected-modifier' : ''}" 
+                            data-modifier="thiqa" 
+                            onclick="selectModifierForCategory('${mod.type}', 'thiqa')">
+                            <input type="number" step="0.01" value="${mod.thiqa}" 
+                                   onchange="updateModifier(${index}, 'thiqa', this.value)" 
+                                   onclick="event.stopPropagation()">
+                        </td>
+                        <td class="modifier-header-cell ${activeModifier === 'lowEnd' ? 'selected-modifier' : ''}" 
+                            data-modifier="lowEnd" 
+                            onclick="selectModifierForCategory('${mod.type}', 'lowEnd')">
+                            <input type="number" step="0.01" value="${mod.lowEnd}" 
+                                   onchange="updateModifier(${index}, 'lowEnd', this.value)" 
+                                   onclick="event.stopPropagation()">
+                        </td>
+                        <td class="modifier-header-cell ${activeModifier === 'basic' ? 'selected-modifier' : ''}" 
+                            data-modifier="basic" 
+                            onclick="selectModifierForCategory('${mod.type}', 'basic')">
+                            <input type="number" step="0.01" value="${mod.basic}" 
+                                   onchange="updateModifier(${index}, 'basic', this.value)" 
+                                   onclick="event.stopPropagation()">
+                        </td>
                     </tr>
-                `).join('')}
+                `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -382,6 +403,23 @@ function setDefaultModifierSettings() {
         'Physiotherapy': 'lowEnd',
         'OP E&M': 'thiqa'
     };
+}
+
+// Select modifier for a specific category
+function selectModifierForCategory(category, modifierType) {
+    // Update the active modifier for this category
+    activeModifiers[category] = modifierType;
+    
+    // Save to localStorage
+    localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    
+    // Re-render the modifiers table to update visual selection
+    renderModifiers();
+    
+    // Re-render results if claims are already processed
+    if (processedClaims.length > 0) {
+        renderResults();
+    }
 }
 
 // Save modifier settings to localStorage
