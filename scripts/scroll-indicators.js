@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const bottomArrow = document.createElement('div');
         bottomArrow.className = 'scroll-indicator scroll-indicator-bottom';
         
-        container.appendChild(topArrow);
+        // Prepend top arrow so it appears at the start (sticks to top)
+        container.prepend(topArrow);
+        // Append bottom arrow so it appears at the end (sticks to bottom)
         container.appendChild(bottomArrow);
         
         // Function to update arrow visibility
