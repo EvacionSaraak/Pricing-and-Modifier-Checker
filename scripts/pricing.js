@@ -402,6 +402,9 @@ function loadModifierSettings() {
         // Fall back to defaults if localStorage fails
         setDefaultModifierSettings();
     }
+    
+    // Re-render modifiers table to apply visual selection
+    renderModifiers();
 }
 
 // Set default modifier settings
