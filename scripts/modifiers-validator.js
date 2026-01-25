@@ -31,17 +31,7 @@ function validateModifiers(xmlRecords, eligibilityData) {
             validationResult.remarks.push(`Code is "${record.code}", expected "CPT modifier"`);
         }
         
-        // Check 2: Modifier 24 needs VOI_D, Modifier 52 needs VOI_EF1
-        const voiNorm = normalizeVOI(record.value);
-        if (record.modifier === '24' && voiNorm !== 'VOID' && voiNorm !== '24') {
-            validationResult.isValid = false;
-            validationResult.remarks.push(`Modifier 24 requires VOI_D or 24, found "${record.value}"`);
-        } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
-            validationResult.isValid = false;
-            validationResult.remarks.push(`Modifier 52 requires VOI_EF1 or 52, found "${record.value}"`);
-        }
-        
-        // Check 3: Eligibility match must exist
+        // Check 2: Eligibility match must exist (do this first to get VOI)
         const eligibilityMatches = eligibilityData.index[key];
         let eligibilityMatch = null;
         
@@ -62,6 +52,24 @@ function validateModifiers(xmlRecords, eligibilityData) {
             validationResult.eligibility = null;
         } else {
             validationResult.eligibility = eligibilityMatch;
+        }
+        
+        // Check 3: Modifier VOI compatibility
+        // Use VOI from eligibility data if available, otherwise fall back to XML observation value
+        let voiToCheck = '';
+        if (eligibilityMatch && eligibilityMatch.voiNumber) {
+            voiToCheck = String(eligibilityMatch.voiNumber).trim();
+        } else {
+            voiToCheck = record.value || '';
+        }
+        
+        const voiNorm = normalizeVOI(voiToCheck);
+        if (record.modifier === '24' && voiNorm !== 'VOID' && voiNorm !== '24') {
+            validationResult.isValid = false;
+            validationResult.remarks.push(`Modifier 24 does not match VOI (expected VOI_D)`);
+        } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
+            validationResult.isValid = false;
+            validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
         }
         
         // Set final remarks as string

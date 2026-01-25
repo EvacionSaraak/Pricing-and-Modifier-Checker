@@ -369,14 +369,6 @@ body {
     border-bottom: 2px solid #dee2e6;
 }
 
-#modifierResultsTable tbody tr.valid-row {
-    background-color: #d1e7dd;
-}
-
-#modifierResultsTable tbody tr.invalid-row {
-    background-color: #f8d7da;
-}
-
 #modifierResultsTable .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;

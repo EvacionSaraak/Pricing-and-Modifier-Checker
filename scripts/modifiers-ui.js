@@ -68,10 +68,19 @@ function displayModifierResults(results) {
     const tbody = document.getElementById('modifierResultsBody');
     tbody.innerHTML = '';
     
+    const filterInvalidOnly = document.getElementById('filterInvalidOnly')?.checked || false;
+    
     for (let i = 0; i < results.length; i++) {
         const record = results[i];
+        
+        // Apply filter if checkbox is checked
+        if (filterInvalidOnly && record.isValid) {
+            continue;
+        }
+        
         const row = document.createElement('tr');
-        row.className = record.isValid ? 'valid-row' : 'invalid-row';
+        // Use Bootstrap table classes for color-coding
+        row.className = record.isValid ? 'table-success' : 'table-danger';
         
         row.innerHTML = `
             <td>${escapeHtml(record.claimID)}</td>
@@ -95,6 +104,11 @@ function displayModifierResults(results) {
     
     // Show results container
     document.getElementById('modifierResultsContainer').style.display = 'block';
+}
+
+// Toggle filter for invalid rows only
+function toggleInvalidFilter() {
+    displayModifierResults(modifierValidationResults);
 }
 
 // View eligibility details in modal
