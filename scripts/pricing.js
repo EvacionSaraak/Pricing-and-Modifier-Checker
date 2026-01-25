@@ -376,20 +376,26 @@ function updateModifierDisplayValues() {
 
 // Load modifier settings from localStorage
 function loadModifierSettings() {
-    const saved = localStorage.getItem('activeModifiers');
-    if (saved) {
-        activeModifiers = JSON.parse(saved);
-        
-        // Apply saved settings to radio buttons
-        for (const [category, modifierType] of Object.entries(activeModifiers)) {
-            const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-${modifierType}`;
-            const radio = document.getElementById(radioId);
-            if (radio) {
-                radio.checked = true;
+    try {
+        const saved = localStorage.getItem('activeModifiers');
+        if (saved) {
+            activeModifiers = JSON.parse(saved);
+            
+            // Apply saved settings to radio buttons
+            for (const [category, modifierType] of Object.entries(activeModifiers)) {
+                const radioId = `${category.toLowerCase().replace(/\s+/g, '').replace('&', '')}-${modifierType}`;
+                const radio = document.getElementById(radioId);
+                if (radio) {
+                    radio.checked = true;
+                }
             }
+        } else {
+            // Set defaults
+            setDefaultModifierSettings();
         }
-    } else {
-        // Set defaults
+    } catch (e) {
+        console.warn('Failed to load modifier settings from localStorage:', e);
+        // Fall back to defaults if localStorage fails
         setDefaultModifierSettings();
     }
 }
@@ -410,8 +416,13 @@ function selectModifierForCategory(category, modifierType) {
     // Update the active modifier for this category
     activeModifiers[category] = modifierType;
     
-    // Save to localStorage
-    localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    // Save to localStorage with error handling
+    try {
+        localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+    } catch (e) {
+        console.warn('Failed to save modifier selection to localStorage:', e);
+        // Continue execution even if localStorage fails
+    }
     
     // Re-render the modifiers table to update visual selection
     renderModifiers();
@@ -434,9 +445,13 @@ function saveModifierSettings() {
         }
     });
     
-    localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
-    
-    alert('Modifier settings saved successfully!');
+    try {
+        localStorage.setItem('activeModifiers', JSON.stringify(activeModifiers));
+        alert('Modifier settings saved successfully!');
+    } catch (e) {
+        console.warn('Failed to save modifier settings to localStorage:', e);
+        alert('Warning: Settings could not be saved (storage may be full or disabled).');
+    }
     
     // Re-render results if claims are already processed
     if (processedClaims.length > 0) {

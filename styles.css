@@ -328,6 +328,13 @@ body {
     }
 }
 
+/* Respect user's motion preferences for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .modifier-header-cell.selected-modifier {
+        animation: none;
+    }
+}
+
 
 /* Status badge styling - applied to spans in Status column only */
 .status-badge.match-success {
