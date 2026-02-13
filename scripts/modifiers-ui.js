@@ -7,10 +7,11 @@ let modifierValidationResults = [];
 async function runModifierCheck() {
     const xmlFile = document.getElementById('modifierXmlFile').files[0];
     const excelFile = document.getElementById('modifierExcelFile').files[0];
+    const modifierCodesFile = document.getElementById('modifierCodesFile').files[0];
     
     // Validate file selection
     if (!xmlFile || !excelFile) {
-        showModifierStatus('Please select both XML and Excel files', 'danger');
+        showModifierStatus('Please select both XML and Excel eligibility files', 'danger');
         return;
     }
     
@@ -26,6 +27,9 @@ async function runModifierCheck() {
             return;
         }
         
+        // Parse all activities from XML for modifier 25 checking
+        const allActivities = parseAllActivities(xmlContent);
+        
         // Read Excel file
         const excelContent = await readFileAsBinary(excelFile);
         const eligibilityData = parseModifierExcel(excelContent);
@@ -36,8 +40,20 @@ async function runModifierCheck() {
             return;
         }
         
+        // Read modifier codes file if provided
+        let modifierCodesMap = null;
+        if (modifierCodesFile) {
+            try {
+                const modifierCodesContent = await readFileAsBinary(modifierCodesFile);
+                modifierCodesMap = parseModifierCodesExcel(modifierCodesContent);
+            } catch (error) {
+                console.warn('Error parsing modifier codes file:', error);
+                showModifierStatus(`Warning: Could not parse modifier codes file. Continuing without it. Error: ${error.message}`, 'warning');
+            }
+        }
+        
         // Validate records
-        modifierValidationResults = validateModifiers(xmlRecords, eligibilityData);
+        modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
         
         if (modifierValidationResults.length === 0) {
             showModifierStatus(`No records matched the filter criteria (PayerID A001 or E001). Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');

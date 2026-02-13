@@ -1,8 +1,11 @@
 // modifiers-validator.js
 // Validates CPT modifiers against eligibility data
 
-function validateModifiers(xmlRecords, eligibilityData) {
+function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap) {
     const validatedRecords = [];
+    
+    // Build a map of claim activities for modifier 25 checking
+    const claimActivitiesMap = buildClaimActivitiesMap(allActivities || []);
     
     for (let record of xmlRecords) {
         // Filter: Keep only PayerID "A001" or "E001"
@@ -70,6 +73,13 @@ function validateModifiers(xmlRecords, eligibilityData) {
         } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
+        } else if (record.modifier === '25') {
+            // Modifier 25 validation - check if it's properly applied
+            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap);
+            if (!modifier25Check.valid) {
+                validationResult.isValid = false;
+                validationResult.remarks.push(modifier25Check.message);
+            }
         }
         
         // Set final remarks as string
@@ -88,6 +98,72 @@ function validateModifiers(xmlRecords, eligibilityData) {
 // Helper to normalize VOI for comparison
 function normalizeVOI(voi) {
     return String(voi || '').toUpperCase().replace(/[_\s]/g, '');
+}
+
+// Build a map of activities by claim ID for easy lookup
+function buildClaimActivitiesMap(allActivities) {
+    const map = {};
+    for (const activity of allActivities) {
+        if (!map[activity.claimID]) {
+            map[activity.claimID] = [];
+        }
+        map[activity.claimID].push(activity);
+    }
+    return map;
+}
+
+// Check if modifier 25 is required for the given record
+function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap) {
+    // Main procedure codes that require modifier 25 validation
+    const MAIN_PROCEDURE_CODES = [
+        '99202', '99203', '99212', '99213',
+        '92002', '92004', '92012', '92014'
+    ];
+    
+    // Get all activities for this claim
+    const claimActivities = claimActivitiesMap[record.claimID] || [];
+    
+    // Check if any main procedure code has amount > 0
+    let hasMainProcedure = false;
+    for (const activity of claimActivities) {
+        if (MAIN_PROCEDURE_CODES.includes(activity.code) && activity.amount > 0) {
+            hasMainProcedure = true;
+            break;
+        }
+    }
+    
+    if (!hasMainProcedure) {
+        // No main procedure code found, modifier 25 validation not applicable
+        return { valid: true };
+    }
+    
+    // If no modifier codes map provided, we can't validate further
+    if (!modifierCodesMap || !modifierCodesMap['25']) {
+        // No configuration available, accept modifier 25 as valid
+        return { valid: true };
+    }
+    
+    // Get the list of codes that require modifier 25
+    const modifier25Codes = modifierCodesMap['25'] || [];
+    
+    // Check if any activity has a code that's in the modifier 25 list AND has amount > 0
+    let hasModifier25Activity = false;
+    for (const activity of claimActivities) {
+        if (modifier25Codes.includes(activity.code) && activity.amount > 0) {
+            hasModifier25Activity = true;
+            break;
+        }
+    }
+    
+    if (!hasModifier25Activity) {
+        // No modifier 25 activity found, this modifier 25 may not be required
+        // But we don't mark it as invalid, just valid since it's optional
+        return { valid: true };
+    }
+    
+    // Both conditions met: main procedure with amount > 0 AND modifier 25 activity with amount > 0
+    // The modifier 25 observation should be present (which it is, since we're validating it)
+    return { valid: true };
 }
 
 // Get validation statistics

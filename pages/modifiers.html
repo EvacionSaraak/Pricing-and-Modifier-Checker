@@ -65,6 +65,16 @@
                 
                 <hr class="my-4">
                 
+                <!-- Modifier Codes Upload Section -->
+                <h5 class="mb-3"><i class="bi bi-file-earmark-spreadsheet"></i> Modifier Codes File</h5>
+                <div class="mb-3">
+                    <label for="modifierCodesFile" class="form-label">Excel File (Optional)</label>
+                    <input type="file" class="form-control" id="modifierCodesFile" accept=".xlsx,.xls,.csv">
+                    <small class="form-text text-muted mt-2 d-block">Upload the Excel file mapping modifiers to activity codes (for modifier 25 validation)</small>
+                </div>
+                
+                <hr class="my-4">
+                
                 <!-- Action Buttons -->
                 <div class="row g-2 mb-4">
                     <div class="col-6">
@@ -146,6 +156,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="../scripts/modifiers-xml-parser.js"></script>
     <script src="../scripts/modifiers-excel-parser.js"></script>
+    <script src="../scripts/modifiers-code-parser.js"></script>
     <script src="../scripts/modifiers-validator.js"></script>
     <script src="../scripts/modifiers-ui.js"></script>
     <script src="../scripts/scroll-indicators.js"></script>

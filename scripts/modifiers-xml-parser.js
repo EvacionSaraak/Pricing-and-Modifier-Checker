@@ -40,6 +40,18 @@ function parseModifierXML(xmlContent) {
         activities.forEach(activity => {
             const activityID = getTextValue(activity, 'ID');
             
+            // Extract activity code and amount
+            const activityCode = firstNonEmpty([
+                getTextValue(activity, 'Code'),
+                getTextValue(activity, 'ActivityCode')
+            ]).trim();
+            
+            const activityAmount = parseFloat(firstNonEmpty([
+                getTextValue(activity, 'NetAmount'),
+                getTextValue(activity, 'Net'),
+                getTextValue(activity, 'Amount')
+            ]) || '0');
+            
             // Try different variations of OrderingClinician tag
             const clinician = firstNonEmpty([
                 getTextValue(activity, 'OrderingClnician'),
@@ -68,6 +80,8 @@ function parseModifierXML(xmlContent) {
                     modifier = '24';
                 } else if (voiNorm === 'VOIEF1' || voiNorm === '52') {
                     modifier = '52';
+                } else if (voiNorm === '25' || voiNorm === 'VOI25') {
+                    modifier = '25';
                 } else {
                     return; // skip anything else
                 }
@@ -76,6 +90,8 @@ function parseModifierXML(xmlContent) {
                     claimID: claimID,
                     memberID: normalizeMemberID(memberIDRaw),
                     activityID: activityID,
+                    activityCode: activityCode,
+                    activityAmount: activityAmount,
                     payerID: payerID,
                     clinician: clinician,
                     date: encDate,
@@ -174,4 +190,58 @@ function toYMD(date) {
 function normalizeMemberID(memberID) {
     if (!memberID) return '';
     return String(memberID).replace(/^0+/, '').trim() || '0';
+}
+
+// Parse XML to extract all activities with their codes and amounts
+// This is used for modifier 25 validation
+function parseAllActivities(xmlContent) {
+    // Preprocess XML to replace unescaped & with "and" for parseability
+    const cleanedXml = xmlContent.replace(/&(?!(amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;))/g, "and");
+    
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(cleanedXml, "text/xml");
+    
+    // Check for parse errors
+    const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
+    if (parseError) {
+        throw new Error('Invalid XML: ' + (parseError.textContent || 'parse error').trim());
+    }
+    
+    const activities = [];
+    const claims = Array.from(xmlDoc.getElementsByTagName('Claim'));
+    
+    claims.forEach(claim => {
+        const claimID = getTextValue(claim, 'ID');
+        const payerID = getTextValue(claim, 'PayerID');
+        
+        // Loop through Activity tags
+        const activityNodes = Array.from(claim.getElementsByTagName('Activity'));
+        activityNodes.forEach(activity => {
+            const activityID = getTextValue(activity, 'ID');
+            
+            // Extract activity code and amount
+            const activityCode = firstNonEmpty([
+                getTextValue(activity, 'Code'),
+                getTextValue(activity, 'ActivityCode')
+            ]).trim();
+            
+            const activityAmount = parseFloat(firstNonEmpty([
+                getTextValue(activity, 'NetAmount'),
+                getTextValue(activity, 'Net'),
+                getTextValue(activity, 'Amount')
+            ]) || '0');
+            
+            if (activityCode) {
+                activities.push({
+                    claimID: claimID,
+                    activityID: activityID,
+                    code: activityCode,
+                    amount: activityAmount,
+                    payerID: payerID
+                });
+            }
+        });
+    });
+    
+    return activities;
 }
