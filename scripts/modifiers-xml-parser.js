@@ -39,18 +39,8 @@ function parseModifierXML(xmlContent) {
         const activities = Array.from(claim.getElementsByTagName('Activity'));
         activities.forEach(activity => {
             const activityID = getTextValue(activity, 'ID');
-            
-            // Extract activity code and amount
-            const activityCode = firstNonEmpty([
-                getTextValue(activity, 'Code'),
-                getTextValue(activity, 'ActivityCode')
-            ]).trim();
-            
-            const activityAmount = parseFloat(firstNonEmpty([
-                getTextValue(activity, 'NetAmount'),
-                getTextValue(activity, 'Net'),
-                getTextValue(activity, 'Amount')
-            ]) || '0');
+            const activityCode = extractActivityCode(activity);
+            const activityAmount = extractActivityAmount(activity);
             
             // Try different variations of OrderingClinician tag
             const clinician = firstNonEmpty([
@@ -192,6 +182,23 @@ function normalizeMemberID(memberID) {
     return String(memberID).replace(/^0+/, '').trim() || '0';
 }
 
+// Helper function to extract activity code from an Activity node
+function extractActivityCode(activity) {
+    return firstNonEmpty([
+        getTextValue(activity, 'Code'),
+        getTextValue(activity, 'ActivityCode')
+    ]).trim();
+}
+
+// Helper function to extract activity amount from an Activity node
+function extractActivityAmount(activity) {
+    return parseFloat(firstNonEmpty([
+        getTextValue(activity, 'NetAmount'),
+        getTextValue(activity, 'Net'),
+        getTextValue(activity, 'Amount')
+    ]) || '0');
+}
+
 // Parse XML to extract all activities with their codes and amounts
 // This is used for modifier 25 validation
 function parseAllActivities(xmlContent) {
@@ -218,18 +225,8 @@ function parseAllActivities(xmlContent) {
         const activityNodes = Array.from(claim.getElementsByTagName('Activity'));
         activityNodes.forEach(activity => {
             const activityID = getTextValue(activity, 'ID');
-            
-            // Extract activity code and amount
-            const activityCode = firstNonEmpty([
-                getTextValue(activity, 'Code'),
-                getTextValue(activity, 'ActivityCode')
-            ]).trim();
-            
-            const activityAmount = parseFloat(firstNonEmpty([
-                getTextValue(activity, 'NetAmount'),
-                getTextValue(activity, 'Net'),
-                getTextValue(activity, 'Amount')
-            ]) || '0');
+            const activityCode = extractActivityCode(activity);
+            const activityAmount = extractActivityAmount(activity);
             
             if (activityCode) {
                 activities.push({

@@ -133,18 +133,24 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
     }
     
     if (!hasMainProcedure) {
-        // No main procedure code found, modifier 25 validation not applicable
+        // No main procedure code found, modifier 25 is not required
+        // But if it's present anyway, that's acceptable (no validation error)
         return { valid: true };
     }
     
-    // If no modifier codes map provided, we can't validate further
+    // If no modifier codes map provided, we can't validate the requirement
+    // Accept modifier 25 as valid since we can't determine if it's truly needed
     if (!modifierCodesMap || !modifierCodesMap['25']) {
-        // No configuration available, accept modifier 25 as valid
         return { valid: true };
     }
     
     // Get the list of codes that require modifier 25
     const modifier25Codes = modifierCodesMap['25'] || [];
+    
+    // If the config is empty (no codes specified), accept modifier 25 as valid
+    if (modifier25Codes.length === 0) {
+        return { valid: true };
+    }
     
     // Check if any activity has a code that's in the modifier 25 list AND has amount > 0
     let hasModifier25Activity = false;
@@ -156,13 +162,16 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
     }
     
     if (!hasModifier25Activity) {
-        // No modifier 25 activity found, this modifier 25 may not be required
-        // But we don't mark it as invalid, just valid since it's optional
-        return { valid: true };
+        // Modifier 25 is present but not required (no qualifying activity codes found)
+        // According to the requirements, modifier 25 should only be present when both conditions are met
+        return { 
+            valid: false, 
+            message: 'Modifier 25 present but not required (no qualifying activity codes with amount > 0)' 
+        };
     }
     
     // Both conditions met: main procedure with amount > 0 AND modifier 25 activity with amount > 0
-    // The modifier 25 observation should be present (which it is, since we're validating it)
+    // Modifier 25 is correctly applied
     return { valid: true };
 }
 
