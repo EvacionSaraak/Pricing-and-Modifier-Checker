@@ -115,10 +115,10 @@ function buildClaimActivitiesMap(allActivities) {
 // Check if modifier 25 is required for the given record
 function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap) {
     // Main procedure codes that require modifier 25 validation
-    const MAIN_PROCEDURE_CODES = [
+    const MAIN_PROCEDURE_CODES = new Set([
         '99202', '99203', '99212', '99213',
         '92002', '92004', '92012', '92014'
-    ];
+    ]);
     
     // Get all activities for this claim
     const claimActivities = claimActivitiesMap[record.claimID] || [];
@@ -126,7 +126,7 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
     // Check if any main procedure code has amount > 0
     let hasMainProcedure = false;
     for (const activity of claimActivities) {
-        if (MAIN_PROCEDURE_CODES.includes(activity.code) && activity.amount > 0) {
+        if (MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
             hasMainProcedure = true;
             break;
         }
@@ -144,18 +144,18 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
         return { valid: true };
     }
     
-    // Get the list of codes that require modifier 25
-    const modifier25Codes = modifierCodesMap['25'] || [];
+    // Get the list of codes that require modifier 25 and convert to Set for O(1) lookup
+    const modifier25Codes = new Set(modifierCodesMap['25'] || []);
     
     // If the config is empty (no codes specified), accept modifier 25 as valid
-    if (modifier25Codes.length === 0) {
+    if (modifier25Codes.size === 0) {
         return { valid: true };
     }
     
     // Check if any activity has a code that's in the modifier 25 list AND has amount > 0
     let hasModifier25Activity = false;
     for (const activity of claimActivities) {
-        if (modifier25Codes.includes(activity.code) && activity.amount > 0) {
+        if (modifier25Codes.has(activity.code) && activity.amount > 0) {
             hasModifier25Activity = true;
             break;
         }

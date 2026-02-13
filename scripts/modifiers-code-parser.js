@@ -100,16 +100,3 @@ function parseModifierCodesExcel(fileData) {
     
     return modifierMap;
 }
-
-// Helper function to find column index by possible names
-function findColumnIndex(headers, possibleNames) {
-    for (let i = 0; i < headers.length; i++) {
-        const header = String(headers[i] || '').trim();
-        for (let name of possibleNames) {
-            if (header.toLowerCase() === name.toLowerCase()) {
-                return i;
-            }
-        }
-    }
-    return -1;
-}
