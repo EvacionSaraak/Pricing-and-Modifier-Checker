@@ -166,6 +166,8 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
         if (hasOtherActivities) {
             // This claim NEEDS modifier 25 but doesn't have it
             // Create a validation record for this missing modifier
+            // Note: We don't have memberID, date, clinician from activities, so these remain empty
+            // The claimID and activityID provide enough context for tracking
             missingRecords.push({
                 claimID: claimID,
                 activityID: mainProcedureActivity.activityID,
@@ -177,7 +179,7 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
                 date: '',
                 clinician: '',
                 isValid: false,
-                remarks: 'Modifier 25 REQUIRED but MISSING (main procedure code with amount > 0 AND other activities with amount > 0)',
+                remarks: 'Modifier 25 required but missing (main procedure code with amount > 0 and other activities with amount > 0)',
                 eligibility: null
             });
         }
