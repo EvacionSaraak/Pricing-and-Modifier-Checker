@@ -85,13 +85,18 @@ async function runModifierCheck() {
             console.log('First 500 chars:', xmlContent.substring(0, 500));
         }
         
-        const xmlRecords = parseModifierXML(xmlContent);
-        
-        if (DEBUG_MODIFIER_UI) {
-            console.log(`\nModifier records found: ${xmlRecords.length}`);
-            if (xmlRecords.length > 0) {
-                console.log('First record:', xmlRecords[0]);
+        let xmlRecords;
+        try {
+            xmlRecords = parseModifierXML(xmlContent);
+            if (DEBUG_MODIFIER_UI) {
+                console.log(`\nModifier records found: ${xmlRecords.length}`);
+                if (xmlRecords.length > 0) {
+                    console.log('First record:', xmlRecords[0]);
+                }
             }
+        } catch (parseError) {
+            console.error('Error parsing XML for modifier records:', parseError);
+            throw parseError; // Re-throw to be caught by outer try-catch
         }
         
         if (xmlRecords.length === 0) {
@@ -107,10 +112,18 @@ async function runModifierCheck() {
         if (DEBUG_MODIFIER_UI) {
             console.log('\n--- Parsing all activities ---');
         }
-        const allActivities = parseAllActivities(xmlContent);
-        
-        if (DEBUG_MODIFIER_UI) {
-            console.log(`All activities found: ${allActivities.length}`);
+        let allActivities;
+        try {
+            allActivities = parseAllActivities(xmlContent);
+            if (DEBUG_MODIFIER_UI) {
+                console.log(`All activities found: ${allActivities.length}`);
+                if (allActivities.length > 0) {
+                    console.log('Sample activities:', allActivities.slice(0, 3));
+                }
+            }
+        } catch (parseError) {
+            console.error('Error parsing XML for all activities:', parseError);
+            throw parseError; // Re-throw to be caught by outer try-catch
         }
         
         // Read Excel file
@@ -185,6 +198,7 @@ async function runModifierCheck() {
         
     } catch (error) {
         console.error('Error processing files:', error);
+        console.error('Error stack:', error.stack);
         hideLoadingScreen();
         showModifierStatus(`Error: ${error.message}`, 'danger');
     }
