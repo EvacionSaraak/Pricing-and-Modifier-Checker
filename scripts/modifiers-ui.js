@@ -127,7 +127,7 @@ async function runModifierCheck() {
         // Show success message with stats
         const stats = getValidationStats(modifierValidationResults);
         showModifierStatus(
-            `Processing complete! Total: ${stats.total}, Valid: ${stats.valid}, Invalid: ${stats.invalid}`,
+            `Processing complete! Total: ${stats.total}, Valid: ${stats.valid}, Invalid: ${stats.invalid}, Unknown: ${stats.unknown}`,
             'success'
         );
         
@@ -148,13 +148,19 @@ function displayModifierResults(results) {
         const record = results[i];
         
         // Apply filter if checkbox is checked
-        if (filterInvalidOnly && record.isValid) {
+        if (filterInvalidOnly && record.isValid === true) {
             continue;
         }
         
         const row = document.createElement('tr');
         // Use Bootstrap table classes for color-coding
-        row.className = record.isValid ? 'table-success' : 'table-danger';
+        if (record.isValid === true) {
+            row.className = 'table-success';
+        } else if (record.isValid === 'unknown') {
+            row.className = 'table-warning';
+        } else {
+            row.className = 'table-danger';
+        }
         
         row.innerHTML = `
             <td>${escapeHtml(record.claimID)}</td>
@@ -236,8 +242,8 @@ function viewEligibilityDetails(index) {
         <div class="row mt-3">
             <div class="col-12">
                 <h6>Validation Status</h6>
-                <div class="alert ${record.isValid ? 'alert-success' : 'alert-danger'}">
-                    <strong>${record.isValid ? 'VALID' : 'INVALID'}</strong>
+                <div class="alert ${record.isValid === true ? 'alert-success' : (record.isValid === 'unknown' ? 'alert-warning' : 'alert-danger')}">
+                    <strong>${record.isValid === true ? 'VALID' : (record.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID')}</strong>
                     <p class="mb-0 mt-2">${escapeHtml(record.remarks)}</p>
                 </div>
             </div>
@@ -271,7 +277,7 @@ function downloadModifierResults() {
             'Payer ID': record.payerID,
             'Date': record.date,
             'Normalized Date': record.normalizedDate,
-            'Status': record.isValid ? 'VALID' : 'INVALID',
+            'Status': record.isValid === true ? 'VALID' : (record.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID'),
             'Remarks': record.remarks,
             'Eligibility Match': record.eligibility ? 'Yes' : 'No',
             'VOI Number': record.eligibility ? record.eligibility.voiNumber : ''
@@ -353,12 +359,15 @@ function getValidationStats(results) {
     const stats = {
         total: results.length,
         valid: 0,
-        invalid: 0
+        invalid: 0,
+        unknown: 0
     };
     
     results.forEach(record => {
-        if (record.isValid) {
+        if (record.isValid === true) {
             stats.valid++;
+        } else if (record.isValid === 'unknown') {
+            stats.unknown++;
         } else {
             stats.invalid++;
         }

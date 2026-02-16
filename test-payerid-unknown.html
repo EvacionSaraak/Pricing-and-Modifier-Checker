@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PayerID Unknown Status & Message Simplification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        #console-output {
+            background-color: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test PayerID Unknown Status & Message Simplification</h1>
+    
+    <div class="test-section">
+        <h2>Test Scenarios</h2>
+        <button onclick="testModifier25Message()">Test 1: Modifier 25 Message Simplified</button>
+        <button onclick="testPayerIDE001()">Test 2: PayerID E001 (should be invalid)</button>
+        <button onclick="testPayerIDD001()">Test 3: PayerID D001 (should be invalid)</button>
+        <button onclick="testPayerIDOther()">Test 4: PayerID A001 (should be unknown)</button>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Console Output:</h3>
+        <div id="console-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Results:</h3>
+        <div id="test-results"></div>
+    </div>
+
+    <script src="scripts/modifiers-xml-parser.js"></script>
+    <script src="scripts/modifiers-excel-parser.js"></script>
+    <script src="scripts/modifiers-validator.js"></script>
+
+    <script>
+        // Override console.log to display in our output div
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            const output = document.getElementById('console-output');
+            const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+            output.innerHTML += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        };
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '';
+            document.getElementById('test-results').innerHTML = '';
+        }
+
+        function addTestResult(testName, passed, details) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result ' + (passed ? 'pass' : 'fail');
+            resultDiv.innerHTML = `
+                <h4>${passed ? '✅' : '❌'} ${testName}</h4>
+                <p>${passed ? 'PASS' : 'FAIL'}: ${details}</p>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function testModifier25Message() {
+            console.log('\n=== Test 1: Modifier 25 Message Simplified ===');
+            console.log('Scenario: Claim with main procedure (99213) + other activity, but NO modifier 25');
+            console.log('Expected: Message should be "Modifier 25 required but missing" (simplified)');
+            
+            const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Claims>
+    <Claim ID="CLAIM-001" PayerID="E001" MemberID="0012345">
+        <Encounter Start="2024-01-20"/>
+        <Activity ID="ACT-001" Code="99213" Amount="200" OrderingClinician="DR. SMITH"/>
+        <Activity ID="ACT-002" Code="10060" Amount="100" OrderingClinician="DR. SMITH"/>
+    </Claim>
+</Claims>`;
+
+            const xmlRecords = parseModifierXML(xmlContent);
+            const allActivities = parseAllActivities(xmlContent);
+            const eligibilityData = { index: {} };
+            
+            const validatedRecords = validateModifiers(xmlRecords, eligibilityData, allActivities, null);
+            
+            console.log(`Total validated records: ${validatedRecords.length}`);
+            const missingMod25 = validatedRecords.find(r => r.modifier === '25' && r.remarks.includes('missing'));
+            
+            if (missingMod25) {
+                console.log('Missing modifier 25 record found!');
+                console.log(`Remarks: "${missingMod25.remarks}"`);
+                
+                const hasVerboseMessage = missingMod25.remarks.includes('main procedure code with amount > 0');
+                const hasSimpleMessage = missingMod25.remarks === 'Modifier 25 required but missing';
+                
+                if (hasSimpleMessage) {
+                    addTestResult('Test 1: Modifier 25 Message Simplified', true, 
+                        `Message is simplified: "${missingMod25.remarks}"`);
+                } else if (hasVerboseMessage) {
+                    addTestResult('Test 1: Modifier 25 Message Simplified', false, 
+                        `Message still contains verbose text: "${missingMod25.remarks}"`);
+                } else {
+                    addTestResult('Test 1: Modifier 25 Message Simplified', false, 
+                        `Unexpected message: "${missingMod25.remarks}"`);
+                }
+            } else {
+                addTestResult('Test 1: Modifier 25 Message Simplified', false, 
+                    'No missing modifier 25 record found');
+            }
+        }
+
+        function testPayerIDE001() {
+            console.log('\n=== Test 2: PayerID E001 Without Eligibility ===');
+            console.log('Scenario: Record with PayerID E001, no eligibility match');
+            console.log('Expected: Should be marked as INVALID (not unknown)');
+            
+            const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Claims>
+    <Claim ID="CLAIM-E001" PayerID="E001" MemberID="0012345">
+        <Encounter Start="2024-01-20"/>
+        <Activity ID="ACT-001" Code="99202" Amount="150" OrderingClinician="DR. SMITH">
+            <Observation ValueType="Modifiers" Code="CPT modifier" Value="VOI_D"/>
+        </Activity>
+    </Claim>
+</Claims>`;
+
+            const xmlRecords = parseModifierXML(xmlContent);
+            const allActivities = parseAllActivities(xmlContent);
+            const eligibilityData = { index: {} }; // Empty - no eligibility
+            
+            const validatedRecords = validateModifiers(xmlRecords, eligibilityData, allActivities, null);
+            
+            console.log(`Total validated records: ${validatedRecords.length}`);
+            const record = validatedRecords[0];
+            
+            if (record) {
+                console.log(`PayerID: ${record.payerID}`);
+                console.log(`isValid: ${record.isValid}`);
+                console.log(`Remarks: "${record.remarks}"`);
+                
+                const isInvalid = record.isValid === false;
+                const hasCorrectMessage = record.remarks.includes('No eligibility match found');
+                
+                if (isInvalid && hasCorrectMessage) {
+                    addTestResult('Test 2: PayerID E001', true, 
+                        `Correctly marked as INVALID with message: "${record.remarks}"`);
+                } else {
+                    addTestResult('Test 2: PayerID E001', false, 
+                        `Expected invalid=false, got: ${record.isValid}. Message: "${record.remarks}"`);
+                }
+            } else {
+                addTestResult('Test 2: PayerID E001', false, 'No record found');
+            }
+        }
+
+        function testPayerIDD001() {
+            console.log('\n=== Test 3: PayerID D001 Without Eligibility ===');
+            console.log('Scenario: Record with PayerID D001, no eligibility match');
+            console.log('Expected: Should be marked as INVALID (not unknown)');
+            
+            const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Claims>
+    <Claim ID="CLAIM-D001" PayerID="D001" MemberID="0012345">
+        <Encounter Start="2024-01-20"/>
+        <Activity ID="ACT-001" Code="99202" Amount="150" OrderingClinician="DR. SMITH">
+            <Observation ValueType="Modifiers" Code="CPT modifier" Value="VOI_D"/>
+        </Activity>
+    </Claim>
+</Claims>`;
+
+            const xmlRecords = parseModifierXML(xmlContent);
+            const allActivities = parseAllActivities(xmlContent);
+            const eligibilityData = { index: {} }; // Empty - no eligibility
+            
+            const validatedRecords = validateModifiers(xmlRecords, eligibilityData, allActivities, null);
+            
+            console.log(`Total validated records: ${validatedRecords.length}`);
+            const record = validatedRecords[0];
+            
+            if (record) {
+                console.log(`PayerID: ${record.payerID}`);
+                console.log(`isValid: ${record.isValid}`);
+                console.log(`Remarks: "${record.remarks}"`);
+                
+                const isInvalid = record.isValid === false;
+                const hasCorrectMessage = record.remarks.includes('No eligibility match found');
+                
+                if (isInvalid && hasCorrectMessage) {
+                    addTestResult('Test 3: PayerID D001', true, 
+                        `Correctly marked as INVALID with message: "${record.remarks}"`);
+                } else {
+                    addTestResult('Test 3: PayerID D001', false, 
+                        `Expected invalid=false, got: ${record.isValid}. Message: "${record.remarks}"`);
+                }
+            } else {
+                addTestResult('Test 3: PayerID D001', false, 'No record found');
+            }
+        }
+
+        function testPayerIDOther() {
+            console.log('\n=== Test 4: PayerID A001 (Other) Without Eligibility ===');
+            console.log('Scenario: Record with PayerID A001 (not E001 or D001), no eligibility match');
+            console.log('Expected: Should be marked as UNKNOWN (not invalid)');
+            
+            const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Claims>
+    <Claim ID="CLAIM-A001" PayerID="A001" MemberID="0012345">
+        <Encounter Start="2024-01-20"/>
+        <Activity ID="ACT-001" Code="99202" Amount="150" OrderingClinician="DR. SMITH">
+            <Observation ValueType="Modifiers" Code="CPT modifier" Value="VOI_D"/>
+        </Activity>
+    </Claim>
+</Claims>`;
+
+            const xmlRecords = parseModifierXML(xmlContent);
+            const allActivities = parseAllActivities(xmlContent);
+            const eligibilityData = { index: {} }; // Empty - no eligibility
+            
+            const validatedRecords = validateModifiers(xmlRecords, eligibilityData, allActivities, null);
+            
+            console.log(`Total validated records: ${validatedRecords.length}`);
+            const record = validatedRecords[0];
+            
+            if (record) {
+                console.log(`PayerID: ${record.payerID}`);
+                console.log(`isValid: ${record.isValid}`);
+                console.log(`Remarks: "${record.remarks}"`);
+                
+                const isUnknown = record.isValid === 'unknown';
+                const hasCorrectMessage = record.remarks.includes('Unknown status (PayerID not E001 or D001)');
+                
+                if (isUnknown && hasCorrectMessage) {
+                    addTestResult('Test 4: PayerID A001 (Other)', true, 
+                        `Correctly marked as UNKNOWN with message: "${record.remarks}"`);
+                } else {
+                    addTestResult('Test 4: PayerID A001 (Other)', false, 
+                        `Expected isValid='unknown', got: ${record.isValid}. Message: "${record.remarks}"`);
+                }
+            } else {
+                addTestResult('Test 4: PayerID A001 (Other)', false, 'No record found');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -48,8 +48,16 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
         }
         
         if (!eligibilityMatch) {
-            validationResult.isValid = false;
-            validationResult.remarks.push('No eligibility match found');
+            // Check if PayerID is E001 or D001
+            if (record.payerID === 'E001' || record.payerID === 'D001') {
+                // For E001 and D001, no eligibility match is invalid
+                validationResult.isValid = false;
+                validationResult.remarks.push('No eligibility match found');
+            } else {
+                // For other PayerIDs, mark as unknown instead of invalid
+                validationResult.isValid = 'unknown';
+                validationResult.remarks.push('Unknown status (PayerID not E001 or D001)');
+            }
             validationResult.eligibility = null;
         } else {
             validationResult.eligibility = eligibilityMatch;
@@ -81,8 +89,10 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
         }
         
         // Set final remarks as string
-        if (validationResult.isValid) {
+        if (validationResult.isValid === true) {
             validationResult.remarks = 'Valid';
+        } else if (validationResult.isValid === 'unknown') {
+            validationResult.remarks = validationResult.remarks.join('; ');
         } else {
             validationResult.remarks = validationResult.remarks.join('; ');
         }
@@ -179,7 +189,7 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
                 date: '',
                 clinician: '',
                 isValid: false,
-                remarks: 'Modifier 25 required but missing (main procedure code with amount > 0 and other activities with amount > 0)',
+                remarks: 'Modifier 25 required but missing',
                 eligibility: null
             });
         }
@@ -247,6 +257,7 @@ function getValidationStats(validatedRecords) {
         total: validatedRecords.length,
         valid: 0,
         invalid: 0,
+        unknown: 0,
         modifier24: 0,
         modifier52: 0,
         payerA001: 0,
@@ -254,8 +265,10 @@ function getValidationStats(validatedRecords) {
     };
     
     for (let record of validatedRecords) {
-        if (record.isValid) {
+        if (record.isValid === true) {
             stats.valid++;
+        } else if (record.isValid === 'unknown') {
+            stats.unknown++;
         } else {
             stats.invalid++;
         }
