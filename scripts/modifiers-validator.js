@@ -1,6 +1,30 @@
 // modifiers-validator.js
 // Validates CPT modifiers against eligibility data
 
+// Default list of common CPT codes that typically require modifier 25 when performed with E/M services
+const DEFAULT_MODIFIER_25_CODES = [
+    // Integumentary/Skin procedures (10000-19999)
+    '10040', '10060', '10080', '10120', '10140', '10160', '10180',
+    '11000', '11042', '11043', '11044', '11055', '11056', '11057',
+    '11200', '11300', '11301', '11302', '11303',
+    '11400', '11401', '11402', '11403', '11404',
+    '11420', '11421', '11422', '11423', '11424',
+    '11600', '11601', '11602', '11603', '11604',
+    '11620', '11621', '11622', '11623', '11624',
+    '11640', '11641', '11642', '11643', '11644',
+    '11719', '11720', '11721', '11730', '11732',
+    '11750', '11755', '11760', '11765',
+    // Wound repair (12000-13999)
+    '12001', '12002', '12004', '12005', '12006', '12007',
+    '12011', '12013', '12014', '12015', '12016', '12017', '12018',
+    '12020', '12021',
+    '12031', '12032', '12034', '12035', '12036', '12037',
+    '12041', '12042', '12044', '12045', '12046', '12047',
+    '12051', '12052', '12053', '12054', '12055', '12056', '12057',
+    // Other common procedures
+    '69210', // User's specific code
+];
+
 function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap) {
     const validatedRecords = [];
     
@@ -134,13 +158,15 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
     
     const missingRecords = [];
     
-    // If no modifier codes map provided, don't flag missing modifier 25 (avoid false positives)
-    if (!modifierCodesMap || !modifierCodesMap['25'] || modifierCodesMap['25'].length === 0) {
-        return missingRecords; // Return empty array - no check without Modifiers.xlsx
+    // Determine which codes to check for modifier 25 requirement
+    let codesToCheck;
+    if (modifierCodesMap && modifierCodesMap['25'] && modifierCodesMap['25'].length > 0) {
+        // Use codes from Modifiers.xlsx if provided
+        codesToCheck = new Set(modifierCodesMap['25']);
+    } else {
+        // Use default list if no Modifiers.xlsx provided
+        codesToCheck = new Set(DEFAULT_MODIFIER_25_CODES);
     }
-    
-    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file
-    const modifier25RequiredCodes = new Set(modifierCodesMap['25']);
     
     // Build a set of claimIDs that already have modifier 25
     const claimsWithModifier25 = new Set();
@@ -172,12 +198,12 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
             continue; // No main procedure, modifier 25 not relevant
         }
         
-        // Check if OTHER activities that are in the modifier 25 required codes list have amount > 0
+        // Check if OTHER activities that are in the codes to check list have amount > 0
         let hasOtherActivitiesRequiringModifier25 = false;
         for (const activity of activities) {
             if (!MAIN_PROCEDURE_CODES.has(activity.code) && 
                 activity.amount > 0 &&
-                modifier25RequiredCodes.has(activity.code)) {
+                codesToCheck.has(activity.code)) {
                 hasOtherActivitiesRequiringModifier25 = true;
                 break;
             }
@@ -237,22 +263,22 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
         };
     }
     
-    // If no modifier codes map provided, accept modifier 25 as valid (can't determine if required)
-    if (!modifierCodesMap || !modifierCodesMap['25'] || modifierCodesMap['25'].length === 0) {
-        // No Modifiers.xlsx file - can't validate modifier 25 requirement
-        // Accept as valid to avoid false negatives
-        return { valid: true, message: 'Valid' };
+    // Determine which codes to check for modifier 25 requirement
+    let codesToCheck;
+    if (modifierCodesMap && modifierCodesMap['25'] && modifierCodesMap['25'].length > 0) {
+        // Use codes from Modifiers.xlsx if provided
+        codesToCheck = new Set(modifierCodesMap['25']);
+    } else {
+        // Use default list if no Modifiers.xlsx provided
+        codesToCheck = new Set(DEFAULT_MODIFIER_25_CODES);
     }
     
-    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file
-    const modifier25RequiredCodes = new Set(modifierCodesMap['25']);
-    
-    // Check if OTHER activities that are in the modifier 25 required codes list have amount > 0
+    // Check if OTHER activities that are in the codes to check list have amount > 0
     let hasOtherActivitiesRequiringModifier25 = false;
     for (const activity of claimActivities) {
         if (!MAIN_PROCEDURE_CODES.has(activity.code) && 
             activity.amount > 0 &&
-            modifier25RequiredCodes.has(activity.code)) {
+            codesToCheck.has(activity.code)) {
             hasOtherActivitiesRequiringModifier25 = true;
             break;
         }
