@@ -136,6 +136,9 @@ A web-based application for validating medical claims pricing and CPT modifiers 
 
 ### XML Claims Format (Modifiers)
 
+The parser supports **flexible XML formats** - both attribute-based and element-based syntax:
+
+**Attribute-based format (recommended):**
 ```xml
 <Claims>
     <Claim ID="CLAIM-001" PayerID="A001" MemberID="0012345">
@@ -146,6 +149,31 @@ A web-based application for validating medical claims pricing and CPT modifiers 
     </Claim>
 </Claims>
 ```
+
+**Element-based format (also supported):**
+```xml
+<Claims>
+    <Claim>
+        <ID>CLAIM-001</ID>
+        <PayerID>A001</PayerID>
+        <MemberID>0012345</MemberID>
+        <Encounter>
+            <Start>2024-01-15</Start>
+        </Encounter>
+        <Activity>
+            <ID>ACT-001</ID>
+            <OrderingClinician>Dr. Smith</OrderingClinician>
+            <Observation>
+                <ValueType>Modifiers</ValueType>
+                <Code>CPT modifier</Code>
+                <Value>VOI_D</Value>
+            </Observation>
+        </Activity>
+    </Claim>
+</Claims>
+```
+
+**Note:** You can also use a mixed format (some attributes, some elements).
 
 ### Excel Eligibility Format
 
