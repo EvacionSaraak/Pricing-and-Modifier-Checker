@@ -8,7 +8,7 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
     const claimActivitiesMap = buildClaimActivitiesMap(allActivities || []);
     
     // Check for missing modifier 25 requirements
-    const missingModifier25 = checkForMissingModifier25(claimActivitiesMap, xmlRecords);
+    const missingModifier25 = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
     
     for (let record of xmlRecords) {
         // Build matching key
@@ -126,13 +126,22 @@ function buildClaimActivitiesMap(allActivities) {
 }
 
 // Check for claims that are MISSING modifier 25 when they should have it
-function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
+function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap) {
     const MAIN_PROCEDURE_CODES = new Set([
         '99202', '99203', '99212', '99213',
         '92002', '92004', '92012', '92014'
     ]);
     
     const missingRecords = [];
+    
+    // If no modifier codes map provided, we can't determine which codes require modifier 25
+    // So we don't flag any missing modifiers (safer to avoid false positives)
+    if (!modifierCodesMap || !modifierCodesMap['25'] || modifierCodesMap['25'].length === 0) {
+        return missingRecords;
+    }
+    
+    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file
+    const modifier25RequiredCodes = new Set(modifierCodesMap['25']);
     
     // Build a set of claimIDs that already have modifier 25
     const claimsWithModifier25 = new Set();
@@ -164,16 +173,19 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
             continue; // No main procedure, modifier 25 not relevant
         }
         
-        // Check if OTHER activities (non-main procedure codes) have amount > 0
-        let hasOtherActivities = false;
+        // Check if OTHER activities that are in the modifier 25 list have amount > 0
+        // This is the key change: only check for codes that are in Modifiers.xlsx Column A with "25" in Column B
+        let hasOtherActivitiesRequiringModifier25 = false;
         for (const activity of activities) {
-            if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
-                hasOtherActivities = true;
+            if (!MAIN_PROCEDURE_CODES.has(activity.code) && 
+                activity.amount > 0 &&
+                modifier25RequiredCodes.has(activity.code)) {
+                hasOtherActivitiesRequiringModifier25 = true;
                 break;
             }
         }
         
-        if (hasOtherActivities) {
+        if (hasOtherActivitiesRequiringModifier25) {
             // This claim NEEDS modifier 25 but doesn't have it
             // Create a validation record for this missing modifier
             // Note: We don't have memberID, date, clinician from activities, so these remain empty
