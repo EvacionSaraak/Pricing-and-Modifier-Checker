@@ -2,8 +2,8 @@
 // UI handling for CPT Modifiers Validation Checker
 
 // Script version for cache debugging
-const SCRIPT_VERSION = '2.1.2';
-console.log(`🔧 Modifiers UI Script Loaded - Version ${SCRIPT_VERSION} - ${new Date().toISOString()}`);
+const SCRIPT_VERSION = '2.2.0';
+console.log(`v${SCRIPT_VERSION}`);
 
 // Debug logging flag - set to true to enable detailed console logging
 const DEBUG_MODIFIER_UI = true;
@@ -59,12 +59,7 @@ async function runModifierCheck() {
     const excelFile = document.getElementById('modifierExcelFile').files[0];
     const modifierCodesFile = document.getElementById('modifierCodesFile').files[0];
     
-    if (DEBUG_MODIFIER_UI) {
-        console.log('=== Run Modifier Check Started ===');
-        console.log('XML File:', xmlFile ? xmlFile.name : 'Not selected');
-        console.log('Excel File:', excelFile ? excelFile.name : 'Not selected');
-        console.log('Modifier Codes File:', modifierCodesFile ? modifierCodesFile.name : 'Not selected');
-    }
+    console.log('START');
     
     // Validate file selection
     if (!xmlFile || !excelFile) {
@@ -75,94 +70,48 @@ async function runModifierCheck() {
     try {
         // Show loading screen
         showLoadingScreen();
-        
         showModifierStatus('Processing files...', 'info');
         
         // Read XML file
-        if (DEBUG_MODIFIER_UI) {
-            console.log('\n--- Reading XML file ---');
-        }
         const xmlContent = await readFileAsText(xmlFile);
-        
-        if (DEBUG_MODIFIER_UI) {
-            console.log('XML content length:', xmlContent.length);
-            console.log('First 500 chars:', xmlContent.substring(0, 500));
-        }
-        
-        // IMMEDIATE TEST - This should show if console is working
-        console.log('🟢 TEST: Code reached line 91');
-        console.log('🟢 TEST: About to log STEP 1');
-        
-        // BREADCRUMB 1: About to parse modifier XML
-        console.log('\n→ STEP 1: About to parse XML for modifier records');
-        console.log('  xmlContent type:', typeof xmlContent);
-        console.log('  xmlContent is string:', typeof xmlContent === 'string');
-        console.log('  xmlContent length:', xmlContent.length);
+        console.log('1.READ', xmlContent.length);
         
         let xmlRecords;
-        console.log('→ STEP 2: Entering try-catch for modifier XML parsing');
         try {
-            console.log('→ STEP 3: Inside try block, calling parseModifierXML()');
+            console.log('2.PARSE');
             xmlRecords = parseModifierXML(xmlContent);
-            console.log('→ STEP 4: parseModifierXML() returned successfully');
-            // ALWAYS log record count (critical for debugging)
-            console.log(`✅ Modifier records found: ${xmlRecords.length}`);
-            if (DEBUG_MODIFIER_UI && xmlRecords.length > 0) {
-                console.log('First record:', xmlRecords[0]);
-            }
+            console.log('3.FOUND', xmlRecords.length);
         } catch (parseError) {
-            // ALWAYS log parse errors (critical for debugging)
-            console.error('❌ CRITICAL ERROR parsing XML for modifier records:', parseError);
-            console.error('Error stack:', parseError.stack);
-            alert(`Failed to parse XML file for modifiers. Check console for details.\n\nError: ${parseError.message}`);
-            throw parseError; // Re-throw to be caught by outer try-catch
+            console.error('ERR:PARSE', parseError.message);
+            alert(`XML Parse Error: ${parseError.message}`);
+            throw parseError;
         }
         
         if (xmlRecords.length === 0) {
-            // ALWAYS warn about no records (critical for debugging)
-            console.warn('⚠️ No modifier records found in XML file');
+            console.warn('NO RECORDS');
             hideLoadingScreen();
             showModifierStatus('No modifier records found in XML file. Total claims parsed: 0', 'warning');
             return;
         }
         
         // Parse all activities from XML for modifier 25 checking
-        console.log('\n--- Parsing all activities ---');
-        console.log('→ STEP 6: About to parse XML for all activities');
         let allActivities;
-        console.log('→ STEP 7: Entering try-catch for activity parsing');
         try {
-            console.log('→ STEP 8: Inside try block, calling parseAllActivities()');
+            console.log('4.ACT');
             allActivities = parseAllActivities(xmlContent);
-            console.log('→ STEP 9: parseAllActivities() returned successfully');
-            // ALWAYS log activity count (critical for debugging)
-            console.log(`✅ All activities found: ${allActivities.length}`);
-            if (DEBUG_MODIFIER_UI && allActivities.length > 0) {
-                console.log('Sample activities:', allActivities.slice(0, 3));
-            }
+            console.log('5.ACT', allActivities.length);
         } catch (parseError) {
-            console.log('→ STEP 10: Activity parse failed, entering catch block');
-            // ALWAYS log parse errors (critical for debugging)
-            console.error('❌ CRITICAL ERROR parsing XML for all activities:', parseError);
-            console.error('Error stack:', parseError.stack);
-            alert(`Failed to parse XML file for activities. Check console for details.\n\nError: ${parseError.message}`);
-            throw parseError; // Re-throw to be caught by outer try-catch
+            console.error('ERR:ACT', parseError.message);
+            alert(`Activity Parse Error: ${parseError.message}`);
+            throw parseError;
         }
         
         // Read Excel file
-        console.log('\n→ STEP 11: About to read Excel eligibility file');
-        if (DEBUG_MODIFIER_UI) {
-            console.log('\n--- Reading Excel eligibility file ---');
-        }
+        console.log('6.XLS');
         const excelContent = await readFileAsBinary(excelFile);
         const eligibilityData = parseModifierExcel(excelContent);
-        console.log('→ STEP 12: Excel file parsed successfully');
-        
         const eligibilityCount = Object.keys(eligibilityData.index).length;
-        
-        if (DEBUG_MODIFIER_UI) {
-            console.log(`Eligibility records found: ${eligibilityCount}`);
-        }
+        console.log('7.ELIG', eligibilityCount);
         
         if (eligibilityCount === 0) {
             hideLoadingScreen();
@@ -173,35 +122,21 @@ async function runModifierCheck() {
         // Read modifier codes file if provided
         let modifierCodesMap = null;
         if (modifierCodesFile) {
-            console.log('\n→ STEP 13: About to read Modifier Codes file');
-            if (DEBUG_MODIFIER_UI) {
-                console.log('\n--- Reading Modifier Codes file ---');
-            }
+            console.log('8.MOD');
             try {
                 const modifierCodesContent = await readFileAsBinary(modifierCodesFile);
                 modifierCodesMap = parseModifierCodesExcel(modifierCodesContent);
-                console.log('→ STEP 14: Modifier codes file parsed successfully');
-                
-                if (DEBUG_MODIFIER_UI) {
-                    console.log('Modifier codes map loaded:', modifierCodesMap);
-                }
+                console.log('9.MOD-OK');
             } catch (error) {
-                console.warn('Error parsing modifier codes file:', error);
+                console.warn('ERR:MOD', error.message);
                 showModifierStatus(`Warning: Could not parse modifier codes file. Continuing without it. Error: ${error.message}`, 'warning');
             }
         }
         
         // Validate records
-        console.log('\n→ STEP 15: About to validate modifier records');
-        console.log('\n--- Validating modifier records ---');
+        console.log('10.VAL');
         modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
-        console.log('→ STEP 16: Validation completed successfully');
-        
-        // ALWAYS log validation results count (critical for debugging)
-        console.log(`✅ Validation results: ${modifierValidationResults.length} records`);
-        if (DEBUG_MODIFIER_UI && modifierValidationResults.length > 0) {
-            console.log('First 3 validation results:', modifierValidationResults.slice(0, 3));
-        }
+        console.log('11.VAL', modifierValidationResults.length);
         
         if (modifierValidationResults.length === 0) {
             hideLoadingScreen();
@@ -210,10 +145,9 @@ async function runModifierCheck() {
         }
         
         // Display results
-        console.log('\n→ STEP 17: About to display results in table');
-        console.log('\n--- Displaying results in table ---');
+        console.log('12.DISP');
         displayModifierResults(modifierValidationResults);
-        console.log('→ STEP 18: Results displayed successfully');
+        console.log('13.DONE');
         
         // Enable download button
         document.getElementById('downloadModifierResultsBtn').disabled = false;
@@ -229,12 +163,9 @@ async function runModifierCheck() {
         hideLoadingScreen();
         
     } catch (error) {
-        // ALWAYS log errors (critical for debugging)
-        console.error('❌ CRITICAL ERROR processing files:', error);
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
+        console.error('ERR:MAIN', error.message);
         hideLoadingScreen();
-        alert(`Critical error occurred during processing. Check console for details.\n\nError: ${error.message}`);
+        alert(`Error: ${error.message}`);
         showModifierStatus(`Error: ${error.message}`, 'danger');
     }
 }
@@ -243,20 +174,7 @@ async function runModifierCheck() {
 function displayModifierResults(results) {
     const tbody = document.getElementById('modifierResultsBody');
     tbody.innerHTML = '';
-    
-    if (DEBUG_MODIFIER_UI) {
-        console.log('\n=== displayModifierResults ===');
-        console.log(`Total results to display: ${results.length}`);
-        console.log('First 3 results:', results.slice(0, 3).map(r => ({
-            claimID: r.claimID,
-            memberID: r.memberID,
-            modifier: r.modifier,
-            isValid: r.isValid
-        })));
-    }
-    
-    // Remove the old checkbox filter
-    const filterInvalidOnly = false; // Deprecated - using new badge filters instead
+    console.log('DISP:', results.length);
     
     // Track displayed claim IDs per status (for deduplication)
     const displayedClaimIDs = {
@@ -284,10 +202,7 @@ function displayModifierResults(results) {
         }
     }
     
-    if (DEBUG_MODIFIER_UI) {
-        console.log('Status counts:', statusCounts);
-        console.log('Status filters:', statusFilters);
-    }
+    console.log('STAT:', statusCounts.valid, statusCounts.invalid, statusCounts.unknown);
     
     // Update count badges
     document.getElementById('validCount').textContent = statusCounts.valid;
@@ -313,9 +228,6 @@ function displayModifierResults(results) {
         // Apply status filter - skip if this status is disabled
         if (!statusFilters[status]) {
             rowsSkippedByFilter++;
-            if (DEBUG_MODIFIER_UI && i < 5) {
-                console.log(`Row ${i}: Skipped by filter (status=${status})`);
-            }
             continue;
         }
         
@@ -359,10 +271,7 @@ function displayModifierResults(results) {
         rowsRendered++;
     }
     
-    if (DEBUG_MODIFIER_UI) {
-        console.log(`Rows rendered: ${rowsRendered}, Rows skipped by filter: ${rowsSkippedByFilter}`);
-        console.log('=== End displayModifierResults ===\n');
-    }
+    console.log('ROWS:', rowsRendered, 'SKIP:', rowsSkippedByFilter);
     
     // Show results container
     document.getElementById('modifierResultsContainer').style.display = 'block';
