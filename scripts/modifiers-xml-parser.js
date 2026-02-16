@@ -106,9 +106,17 @@ function parseModifierXML(xmlContent) {
     });
 }
 
-// Helper function to get text value from a child element
+// Helper function to get text value from a child element or attribute
+// First checks for an attribute with the given name, then checks for a child element
 function getTextValue(node, tagName) {
     if (!node) return '';
+    
+    // Try to get as attribute first
+    if (node.getAttribute && node.hasAttribute(tagName)) {
+        return String(node.getAttribute(tagName) || '').trim();
+    }
+    
+    // Fall back to child element
     const element = node.getElementsByTagName(tagName)[0];
     return element ? String(element.textContent || '').trim() : '';
 }
