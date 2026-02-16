@@ -202,8 +202,9 @@ The CPT Modifiers Validation Checker performs the following checks:
 1. **Code Check**: `Code` attribute must equal "CPT modifier"
 2. **Modifier-VOI Compatibility**:
    - Modifier 24 requires Value "VOI_D" or "24"
-   - Modifier 52 requires Value "VOI_EF1" or "52"
    - Modifier 25 validation (see below)
+   - Modifier 50 requires Value "50" (accepts "VOI_50" which normalizes to "VOI50")
+   - Modifier 52 requires Value "VOI_EF1" or "52"
 3. **Eligibility Match**: Must find matching record using:
    - Member ID (normalized, leading zeros removed)
    - Date (YYYY-MM-DD format)
