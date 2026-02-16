@@ -111,8 +111,8 @@ function parseModifierXML(xmlContent) {
 function getTextValue(node, tagName) {
     if (!node) return '';
     
-    // Try to get as attribute first
-    if (node.getAttribute && node.hasAttribute(tagName)) {
+    // Try to get as attribute first (check if methods exist to avoid errors)
+    if (node.getAttribute && node.hasAttribute && node.hasAttribute(tagName)) {
         return String(node.getAttribute(tagName) || '').trim();
     }
     
