@@ -18,7 +18,6 @@ A web-based application for validating medical claims pricing and CPT modifiers 
   - Code must equal "CPT modifier"
   - Modifier-VOI compatibility (24→VOI_D, 52→VOI_EF1)
   - Eligibility record must exist
-- **PayerID Filtering**: Process only A001 and E001 payers
 - **Color-Coded Results**: Green rows for valid, red rows for invalid
 - **Eligibility Details Modal**: View detailed matching information
 - **Excel Export**: Download validation results
@@ -54,6 +53,10 @@ A web-based application for validating medical claims pricing and CPT modifiers 
      - Ordered On
      - Clinician
      - VOI Number
+   - **Modifier Codes File** (Optional): Excel file mapping modifiers to activity codes
+     - Column 1: Modifier (e.g., 25, 50)
+     - Column 2: Code (activity codes that require this modifier)
+     - Used for modifier 25 validation (see below)
 
 2. **Run Check**:
    - Click "Run Check" button
@@ -62,7 +65,7 @@ A web-based application for validating medical claims pricing and CPT modifiers 
      - Build eligibility index from Excel
      - Match using key: `MemberID|Date|Clinician`
      - Validate all records
-     - Filter by PayerID (A001, E001)
+     - Check modifier 25 requirements if configured
 
 3. **View Results**:
    - Green rows = Valid (all checks passed)
@@ -84,8 +87,10 @@ A web-based application for validating medical claims pricing and CPT modifiers 
 ### Modifiers Feature Files
 - `modifiers-xml-parser.js` - XML parsing for CPT modifiers
 - `modifiers-excel-parser.js` - Excel eligibility data parsing
+- `modifiers-code-parser.js` - Modifier codes mapping parser
 - `modifiers-validator.js` - Validation logic
 - `modifiers-ui.js` - UI interactions and export
+- `Modifier-Codes-Template.csv` - Template for modifier codes configuration file
 
 ## Data Formats
 
@@ -129,6 +134,9 @@ A web-based application for validating medical claims pricing and CPT modifiers 
 
 ### XML Claims Format (Modifiers)
 
+The parser supports **flexible XML formats** - both attribute-based and element-based syntax:
+
+**Attribute-based format (recommended):**
 ```xml
 <Claims>
     <Claim ID="CLAIM-001" PayerID="A001" MemberID="0012345">
@@ -139,6 +147,31 @@ A web-based application for validating medical claims pricing and CPT modifiers 
     </Claim>
 </Claims>
 ```
+
+**Element-based format (also supported):**
+```xml
+<Claims>
+    <Claim>
+        <ID>CLAIM-001</ID>
+        <PayerID>A001</PayerID>
+        <MemberID>0012345</MemberID>
+        <Encounter>
+            <Start>2024-01-15</Start>
+        </Encounter>
+        <Activity>
+            <ID>ACT-001</ID>
+            <OrderingClinician>Dr. Smith</OrderingClinician>
+            <Observation>
+                <ValueType>Modifiers</ValueType>
+                <Code>CPT modifier</Code>
+                <Value>VOI_D</Value>
+            </Observation>
+        </Activity>
+    </Claim>
+</Claims>
+```
+
+**Note:** You can also use a mixed format (some attributes, some elements).
 
 ### Excel Eligibility Format
 
@@ -162,18 +195,37 @@ The claim NET amount is compared against all possible modifier combinations. If 
 
 ## Modifier Validation Rules
 
-The CPT Modifiers Validation Checker performs three checks:
+The CPT Modifiers Validation Checker performs the following checks:
 
 1. **Code Check**: `Code` attribute must equal "CPT modifier"
 2. **Modifier-VOI Compatibility**:
    - Modifier 24 requires Value "VOI_D" or "24"
+   - Modifier 25 validation (see below)
+   - Modifier 50 requires Value "50" (accepts "VOI_50" which normalizes to "VOI50")
    - Modifier 52 requires Value "VOI_EF1" or "52"
 3. **Eligibility Match**: Must find matching record using:
    - Member ID (normalized, leading zeros removed)
    - Date (YYYY-MM-DD format)
    - Clinician name
-   
-**Filter**: Only processes records with PayerID "A001" or "E001"
+
+### Modifier 25 Validation
+
+Modifier 25 is used to identify a significant, separately identifiable evaluation and management (E/M) service by the same physician on the same day of a procedure or other service.
+
+**Requirements**:
+- Main procedure codes: 99202, 99203, 99212, 99213, 92002, 92004, 92012, 92014
+- If one of these codes has an amount > 0 AND an activity code listed in the Modifier Codes file also has amount > 0, then modifier 25 should be present
+
+**Configuration**:
+Upload a Modifier Codes Excel file with the following structure:
+
+| Modifier | Code |
+|----------|------|
+| 25 | CODE1 |
+| 25 | CODE2 |
+| 50 | CODE3 |
+
+The system validates that modifier 25 is correctly applied when both conditions are met.
 
 ## Deployment
 

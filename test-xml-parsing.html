@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test XML Parsing - Attributes vs Elements</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .pass { background-color: #d4edda; }
+        .fail { background-color: #f8d7da; }
+        pre { background-color: #f5f5f5; padding: 10px; overflow-x: auto; }
+        h2 { color: #333; }
+        .result { margin: 10px 0; padding: 10px; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>XML Parsing Test - Attributes vs Child Elements</h1>
+    <div id="results"></div>
+    
+    <script src="scripts/modifiers-xml-parser.js"></script>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        // Test 1: XML with attributes (as shown in README)
+        const attributeBasedXML = `<?xml version="1.0"?>
+<Claims>
+    <Claim ID="CLAIM-001" PayerID="A001" MemberID="0012345">
+        <Encounter Start="2024-01-15"/>
+        <Activity ID="ACT-001" OrderingClinician="Dr. Smith">
+            <Observation ValueType="Modifiers" Code="CPT modifier" Value="VOI_D"/>
+        </Activity>
+    </Claim>
+</Claims>`;
+        
+        // Test 2: XML with child elements
+        const elementBasedXML = `<?xml version="1.0"?>
+<Claims>
+    <Claim>
+        <ID>CLAIM-002</ID>
+        <PayerID>E001</PayerID>
+        <MemberID>0067890</MemberID>
+        <Encounter>
+            <Start>2024-02-16</Start>
+        </Encounter>
+        <Activity>
+            <ID>ACT-002</ID>
+            <OrderingClinician>Dr. Jones</OrderingClinician>
+            <Observation>
+                <ValueType>Modifiers</ValueType>
+                <Code>CPT modifier</Code>
+                <Value>25</Value>
+            </Observation>
+        </Activity>
+    </Claim>
+</Claims>`;
+
+        // Test 3: Mixed format
+        const mixedXML = `<?xml version="1.0"?>
+<Claims>
+    <Claim ID="CLAIM-003" PayerID="A001">
+        <MemberID>0011111</MemberID>
+        <Encounter Start="2024-03-01"/>
+        <Activity ID="ACT-003">
+            <OrderingClinician>Dr. Brown</OrderingClinician>
+            <Code>99202</Code>
+            <NetAmount>100.00</NetAmount>
+            <Observation ValueType="Modifiers">
+                <Code>CPT modifier</Code>
+                <Value>52</Value>
+            </Observation>
+        </Activity>
+    </Claim>
+</Claims>`;
+        
+        function runTest(name, xmlContent, expectedCount, expectedModifier) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            
+            try {
+                const records = parseModifierXML(xmlContent);
+                const allActivities = parseAllActivities(xmlContent);
+                
+                let passed = records.length === expectedCount;
+                if (expectedModifier && records.length > 0) {
+                    passed = passed && records[0].modifier === expectedModifier;
+                }
+                
+                section.className += passed ? ' pass' : ' fail';
+                
+                section.innerHTML = `
+                    <h2>${passed ? '✓' : '✗'} ${name}</h2>
+                    <div class="result">
+                        <p><strong>Expected:</strong> ${expectedCount} record(s) with modifier ${expectedModifier || 'any'}</p>
+                        <p><strong>Got:</strong> ${records.length} record(s)</p>
+                        ${records.length > 0 ? `
+                            <p><strong>First Record:</strong></p>
+                            <pre>${JSON.stringify(records[0], null, 2)}</pre>
+                        ` : '<p><em>No records found</em></p>'}
+                        <p><strong>All Activities Found:</strong> ${allActivities.length}</p>
+                        ${allActivities.length > 0 ? `
+                            <pre>${JSON.stringify(allActivities, null, 2)}</pre>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                section.className += ' fail';
+                section.innerHTML = `
+                    <h2>✗ ${name}</h2>
+                    <div class="result">
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+            
+            results.appendChild(section);
+        }
+        
+        // Run tests
+        runTest('Test 1: Attribute-Based XML (README format)', attributeBasedXML, 1, '24');
+        runTest('Test 2: Element-Based XML', elementBasedXML, 1, '25');
+        runTest('Test 3: Mixed Format XML', mixedXML, 1, '52');
+        
+        // Add summary
+        const summary = document.createElement('div');
+        summary.className = 'test-section';
+        summary.style.backgroundColor = '#e7f3ff';
+        summary.innerHTML = `
+            <h2>Test Summary</h2>
+            <p>The parser should now support both attribute-based and element-based XML formats.</p>
+            <p><strong>Key Changes:</strong></p>
+            <ul>
+                <li>Updated getTextValue() to check attributes first, then child elements</li>
+                <li>This allows parsing of XML files like the one shown in README.md</li>
+                <li>Backwards compatible with element-based XML</li>
+            </ul>
+        `;
+        results.insertBefore(summary, results.firstChild);
+    </script>
+</body>
+</html>

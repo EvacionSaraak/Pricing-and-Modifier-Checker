@@ -1,51 +1,138 @@
 // modifiers-ui.js
 // UI handling for CPT Modifiers Validation Checker
 
+// Script version for cache debugging
+const SCRIPT_VERSION = '2.2.0';
+console.log(`v${SCRIPT_VERSION}`);
+
+// Debug logging flag - set to true to enable detailed console logging
+const DEBUG_MODIFIER_UI = true;
+
 let modifierValidationResults = [];
+
+// Status filter state - track which statuses are enabled
+let statusFilters = {
+    valid: true,
+    invalid: true,
+    unknown: true
+};
+
+// Loading screen functions
+function showLoadingScreen() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+    }
+}
+
+function hideLoadingScreen() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+}
+
+// Toggle status filter
+function toggleStatusFilter(status) {
+    // Toggle the filter state
+    statusFilters[status] = !statusFilters[status];
+    
+    // Update badge visual state
+    const badgeId = `filter${status.charAt(0).toUpperCase() + status.slice(1)}Badge`;
+    const badge = document.getElementById(badgeId);
+    
+    if (badge) {
+        if (statusFilters[status]) {
+            badge.classList.remove('disabled');
+        } else {
+            badge.classList.add('disabled');
+        }
+    }
+    
+    // Re-display results with new filter
+    displayModifierResults(modifierValidationResults);
+}
 
 // Main function to run the modifier check
 async function runModifierCheck() {
     const xmlFile = document.getElementById('modifierXmlFile').files[0];
     const excelFile = document.getElementById('modifierExcelFile').files[0];
     
+    console.log('START');
+    
     // Validate file selection
     if (!xmlFile || !excelFile) {
-        showModifierStatus('Please select both XML and Excel files', 'danger');
+        showModifierStatus('Please select both XML and Excel eligibility files', 'danger');
         return;
     }
     
     try {
+        // Show loading screen
+        showLoadingScreen();
         showModifierStatus('Processing files...', 'info');
         
         // Read XML file
         const xmlContent = await readFileAsText(xmlFile);
-        const xmlRecords = parseModifierXML(xmlContent);
+        console.log('1.READ', xmlContent.length);
+        
+        let xmlRecords;
+        try {
+            console.log('2.PARSE');
+            xmlRecords = parseModifierXML(xmlContent);
+            console.log('3.FOUND', xmlRecords.length);
+        } catch (parseError) {
+            console.error('ERR:PARSE', parseError.message);
+            alert(`XML Parse Error: ${parseError.message}`);
+            throw parseError;
+        }
         
         if (xmlRecords.length === 0) {
+            console.warn('NO RECORDS');
+            hideLoadingScreen();
             showModifierStatus('No modifier records found in XML file. Total claims parsed: 0', 'warning');
             return;
         }
         
+        // Parse all activities from XML for modifier 25 checking
+        let allActivities;
+        try {
+            console.log('4.ACT');
+            allActivities = parseAllActivities(xmlContent);
+            console.log('5.ACT', allActivities.length);
+        } catch (parseError) {
+            console.error('ERR:ACT', parseError.message);
+            alert(`Activity Parse Error: ${parseError.message}`);
+            throw parseError;
+        }
+        
         // Read Excel file
+        console.log('6.XLS');
         const excelContent = await readFileAsBinary(excelFile);
         const eligibilityData = parseModifierExcel(excelContent);
-        
         const eligibilityCount = Object.keys(eligibilityData.index).length;
+        console.log('7.ELIG', eligibilityCount);
+        
         if (eligibilityCount === 0) {
+            hideLoadingScreen();
             showModifierStatus(`No eligibility records found in Excel file. Total claims parsed: ${xmlRecords.length}, Total eligibilities: 0`, 'warning');
             return;
         }
         
-        // Validate records
-        modifierValidationResults = validateModifiers(xmlRecords, eligibilityData);
+        // Validate records (using default modifier 25 codes list)
+        console.log('10.VAL');
+        modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities);
+        console.log('11.VAL', modifierValidationResults.length);
         
         if (modifierValidationResults.length === 0) {
-            showModifierStatus(`No records matched the filter criteria (PayerID A001 or E001). Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
+            hideLoadingScreen();
+            showModifierStatus(`No records found after validation. Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
             return;
         }
         
         // Display results
+        console.log('12.DISP');
         displayModifierResults(modifierValidationResults);
+        console.log('13.DONE');
         
         // Enable download button
         document.getElementById('downloadModifierResultsBtn').disabled = false;
@@ -53,12 +140,17 @@ async function runModifierCheck() {
         // Show success message with stats
         const stats = getValidationStats(modifierValidationResults);
         showModifierStatus(
-            `Processing complete! Total: ${stats.total}, Valid: ${stats.valid}, Invalid: ${stats.invalid}`,
+            `Processing complete! Total: ${stats.total}, Valid: ${stats.valid}, Invalid: ${stats.invalid}, Unknown: ${stats.unknown}`,
             'success'
         );
         
+        // Hide loading screen
+        hideLoadingScreen();
+        
     } catch (error) {
-        console.error('Error processing files:', error);
+        console.error('ERR:MAIN', error.message);
+        hideLoadingScreen();
+        alert(`Error: ${error.message}`);
         showModifierStatus(`Error: ${error.message}`, 'danger');
     }
 }
@@ -67,23 +159,84 @@ async function runModifierCheck() {
 function displayModifierResults(results) {
     const tbody = document.getElementById('modifierResultsBody');
     tbody.innerHTML = '';
+    console.log('DISP:', results.length);
     
-    const filterInvalidOnly = document.getElementById('filterInvalidOnly')?.checked || false;
+    // Track displayed claim IDs per status (for deduplication)
+    const displayedClaimIDs = {
+        'valid': new Set(),
+        'invalid': new Set(),
+        'unknown': new Set()
+    };
+    
+    // Count records by status
+    const statusCounts = {
+        valid: 0,
+        invalid: 0,
+        unknown: 0
+    };
+    
+    // First pass: count all records by status
+    for (let i = 0; i < results.length; i++) {
+        const record = results[i];
+        if (record.isValid === true) {
+            statusCounts.valid++;
+        } else if (record.isValid === 'unknown') {
+            statusCounts.unknown++;
+        } else {
+            statusCounts.invalid++;
+        }
+    }
+    
+    console.log('STAT:', statusCounts.valid, statusCounts.invalid, statusCounts.unknown);
+    
+    // Update count badges
+    document.getElementById('validCount').textContent = statusCounts.valid;
+    document.getElementById('invalidCount').textContent = statusCounts.invalid;
+    document.getElementById('unknownCount').textContent = statusCounts.unknown;
+    
+    let rowsRendered = 0;
+    let rowsSkippedByFilter = 0;
     
     for (let i = 0; i < results.length; i++) {
         const record = results[i];
         
-        // Apply filter if checkbox is checked
-        if (filterInvalidOnly && record.isValid) {
+        // Determine status for tracking
+        let status;
+        if (record.isValid === true) {
+            status = 'valid';
+        } else if (record.isValid === 'unknown') {
+            status = 'unknown';
+        } else {
+            status = 'invalid';
+        }
+        
+        // Apply status filter - skip if this status is disabled
+        if (!statusFilters[status]) {
+            rowsSkippedByFilter++;
             continue;
+        }
+        
+        // Check if claim ID already displayed for this status
+        const claimID = record.claimID;
+        const shouldDisplayClaimID = !displayedClaimIDs[status].has(claimID);
+        
+        // Mark this claim ID as displayed for this status
+        if (shouldDisplayClaimID) {
+            displayedClaimIDs[status].add(claimID);
         }
         
         const row = document.createElement('tr');
         // Use Bootstrap table classes for color-coding
-        row.className = record.isValid ? 'table-success' : 'table-danger';
+        if (record.isValid === true) {
+            row.className = 'table-success';
+        } else if (record.isValid === 'unknown') {
+            row.className = 'table-warning';
+        } else {
+            row.className = 'table-danger';
+        }
         
         row.innerHTML = `
-            <td>${escapeHtml(record.claimID)}</td>
+            <td>${shouldDisplayClaimID ? escapeHtml(record.claimID) : ''}</td>
             <td>${escapeHtml(record.memberID)}</td>
             <td>${escapeHtml(record.activityID)}</td>
             <td>${escapeHtml(record.clinician)}</td>
@@ -100,15 +253,13 @@ function displayModifierResults(results) {
         `;
         
         tbody.appendChild(row);
+        rowsRendered++;
     }
+    
+    console.log('ROWS:', rowsRendered, 'SKIP:', rowsSkippedByFilter);
     
     // Show results container
     document.getElementById('modifierResultsContainer').style.display = 'block';
-}
-
-// Toggle filter for invalid rows only
-function toggleInvalidFilter() {
-    displayModifierResults(modifierValidationResults);
 }
 
 // View eligibility details in modal
@@ -162,8 +313,8 @@ function viewEligibilityDetails(index) {
         <div class="row mt-3">
             <div class="col-12">
                 <h6>Validation Status</h6>
-                <div class="alert ${record.isValid ? 'alert-success' : 'alert-danger'}">
-                    <strong>${record.isValid ? 'VALID' : 'INVALID'}</strong>
+                <div class="alert ${record.isValid === true ? 'alert-success' : (record.isValid === 'unknown' ? 'alert-warning' : 'alert-danger')}">
+                    <strong>${record.isValid === true ? 'VALID' : (record.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID')}</strong>
                     <p class="mb-0 mt-2">${escapeHtml(record.remarks)}</p>
                 </div>
             </div>
@@ -197,7 +348,7 @@ function downloadModifierResults() {
             'Payer ID': record.payerID,
             'Date': record.date,
             'Normalized Date': record.normalizedDate,
-            'Status': record.isValid ? 'VALID' : 'INVALID',
+            'Status': record.isValid === true ? 'VALID' : (record.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID'),
             'Remarks': record.remarks,
             'Eligibility Match': record.eligibility ? 'Yes' : 'No',
             'VOI Number': record.eligibility ? record.eligibility.voiNumber : ''
@@ -279,12 +430,15 @@ function getValidationStats(results) {
     const stats = {
         total: results.length,
         valid: 0,
-        invalid: 0
+        invalid: 0,
+        unknown: 0
     };
     
     results.forEach(record => {
-        if (record.isValid) {
+        if (record.isValid === true) {
             stats.valid++;
+        } else if (record.isValid === 'unknown') {
+            stats.unknown++;
         } else {
             stats.invalid++;
         }

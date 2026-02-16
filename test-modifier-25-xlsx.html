@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modifier 25 with Modifiers.xlsx Logic</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .pass { 
+            color: green; 
+            font-weight: bold;
+        }
+        .fail { 
+            color: red; 
+            font-weight: bold;
+        }
+        h2 { 
+            color: #333; 
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h3 { 
+            color: #555; 
+            margin-top: 15px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test: Modifier 25 Required Logic with Modifiers.xlsx</h1>
+    
+    <div class="test-section">
+        <h2>Test Setup</h2>
+        <p>This test validates that "Modifier 25 required but missing" error only appears when:</p>
+        <ul>
+            <li>Main procedure code (99202, 99203, etc.) has amount > 0</li>
+            <li>AND a minor procedure code from Modifiers.xlsx (Column A with "25" in Column B) has amount > 0</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Cases</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <script src="../scripts/modifiers-validator.js"></script>
+    
+    <script>
+        const resultsDiv = document.getElementById('testResults');
+        let testsPassed = 0;
+        let testsFailed = 0;
+
+        function logTest(testName, passed, details) {
+            const div = document.createElement('div');
+            div.className = 'result';
+            div.innerHTML = `
+                <h3>${passed ? '✅' : '❌'} ${testName}</h3>
+                <p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASSED' : 'FAILED'}</p>
+                ${details ? `<pre>${details}</pre>` : ''}
+            `;
+            resultsDiv.appendChild(div);
+            
+            if (passed) testsPassed++;
+            else testsFailed++;
+        }
+
+        // Test 1: With Modifiers.xlsx - Code in list (should flag error)
+        function test1() {
+            console.log('\n=== Test 1: With modifierCodesMap - Code in list ===');
+            
+            const modifierCodesMap = {
+                '25': ['10040', '10060'], // These codes require modifier 25
+                '50': [],
+                '24': [],
+                '52': []
+            };
+            
+            const claimActivitiesMap = {
+                'CLAIM-001': [
+                    { claimID: 'CLAIM-001', activityID: 'ACT-001', payerID: 'E001', code: '99202', amount: 150 }, // Main procedure
+                    { claimID: 'CLAIM-001', activityID: 'ACT-002', payerID: 'E001', code: '10040', amount: 50 }   // Code in modifier 25 list
+                ]
+            };
+            
+            const xmlRecords = []; // No modifier 25 present
+            
+            const result = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+            
+            const passed = result.length === 1 && result[0].remarks === 'Modifier 25 required but missing';
+            const details = `Expected: 1 missing modifier record\nActual: ${result.length} records\nRemarks: ${result.length > 0 ? result[0].remarks : 'N/A'}`;
+            
+            logTest('Modifier 25 required (code 10040 in Modifiers.xlsx)', passed, details);
+            console.log('Result:', result);
+        }
+
+        // Test 2: With Modifiers.xlsx - Code NOT in list (should NOT flag error)
+        function test2() {
+            console.log('\n=== Test 2: With modifierCodesMap - Code NOT in list ===');
+            
+            const modifierCodesMap = {
+                '25': ['10040', '10060'], // Only these codes require modifier 25
+                '50': [],
+                '24': [],
+                '52': []
+            };
+            
+            const claimActivitiesMap = {
+                'CLAIM-002': [
+                    { claimID: 'CLAIM-002', activityID: 'ACT-003', payerID: 'E001', code: '99202', amount: 150 }, // Main procedure
+                    { claimID: 'CLAIM-002', activityID: 'ACT-004', payerID: 'E001', code: '99999', amount: 50 }   // Code NOT in modifier 25 list
+                ]
+            };
+            
+            const xmlRecords = []; // No modifier 25 present
+            
+            const result = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+            
+            const passed = result.length === 0;
+            const details = `Expected: 0 missing modifier records (code 99999 not in list)\nActual: ${result.length} records`;
+            
+            logTest('Modifier 25 NOT required (code 99999 not in Modifiers.xlsx)', passed, details);
+            console.log('Result:', result);
+        }
+
+        // Test 3: Without Modifiers.xlsx (null modifierCodesMap) - should NOT flag error
+        function test3() {
+            console.log('\n=== Test 3: Without modifierCodesMap (null) ===');
+            
+            const modifierCodesMap = null; // No Modifiers.xlsx file uploaded
+            
+            const claimActivitiesMap = {
+                'CLAIM-003': [
+                    { claimID: 'CLAIM-003', activityID: 'ACT-005', payerID: 'E001', code: '99202', amount: 150 }, // Main procedure
+                    { claimID: 'CLAIM-003', activityID: 'ACT-006', payerID: 'E001', code: '10040', amount: 50 }   // Some other activity
+                ]
+            };
+            
+            const xmlRecords = []; // No modifier 25 present
+            
+            const result = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+            
+            const passed = result.length === 0;
+            const details = `Expected: 0 missing modifier records (no Modifiers.xlsx file)\nActual: ${result.length} records`;
+            
+            logTest('Modifier 25 NOT flagged without Modifiers.xlsx file', passed, details);
+            console.log('Result:', result);
+        }
+
+        // Test 4: With Modifiers.xlsx - Empty modifier 25 list - should NOT flag error
+        function test4() {
+            console.log('\n=== Test 4: With modifierCodesMap - Empty modifier 25 list ===');
+            
+            const modifierCodesMap = {
+                '25': [], // Empty list
+                '50': ['10040'],
+                '24': [],
+                '52': []
+            };
+            
+            const claimActivitiesMap = {
+                'CLAIM-004': [
+                    { claimID: 'CLAIM-004', activityID: 'ACT-007', payerID: 'E001', code: '99202', amount: 150 }, // Main procedure
+                    { claimID: 'CLAIM-004', activityID: 'ACT-008', payerID: 'E001', code: '10040', amount: 50 }   // Some other activity
+                ]
+            };
+            
+            const xmlRecords = []; // No modifier 25 present
+            
+            const result = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+            
+            const passed = result.length === 0;
+            const details = `Expected: 0 missing modifier records (modifier 25 list is empty)\nActual: ${result.length} records`;
+            
+            logTest('Modifier 25 NOT required when list is empty', passed, details);
+            console.log('Result:', result);
+        }
+
+        // Test 5: With Modifiers.xlsx - Claim already has modifier 25 - should NOT flag error
+        function test5() {
+            console.log('\n=== Test 5: With modifierCodesMap - Claim already has modifier 25 ===');
+            
+            const modifierCodesMap = {
+                '25': ['10040'],
+                '50': [],
+                '24': [],
+                '52': []
+            };
+            
+            const claimActivitiesMap = {
+                'CLAIM-005': [
+                    { claimID: 'CLAIM-005', activityID: 'ACT-009', payerID: 'E001', code: '99202', amount: 150 }, // Main procedure
+                    { claimID: 'CLAIM-005', activityID: 'ACT-010', payerID: 'E001', code: '10040', amount: 50 }   // Code in modifier 25 list
+                ]
+            };
+            
+            const xmlRecords = [
+                { claimID: 'CLAIM-005', modifier: '25' } // Modifier 25 already present
+            ];
+            
+            const result = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+            
+            const passed = result.length === 0;
+            const details = `Expected: 0 missing modifier records (modifier 25 already present)\nActual: ${result.length} records`;
+            
+            logTest('Modifier 25 NOT flagged when already present', passed, details);
+            console.log('Result:', result);
+        }
+
+        // Test 6: Multiple codes from list - should flag error
+        function test6() {
+            console.log('\n=== Test 6: Multiple codes from modifier 25 list ===');
+            
+            const modifierCodesMap = {
+                '25': ['10040', '10060', '10080'],
+                '50': [],
+                '24': [],
+                '52': []
+            };
+            
+            const claimActivitiesMap = {
+                'CLAIM-006': [
+                    { claimID: 'CLAIM-006', activityID: 'ACT-011', payerID: 'E001', code: '99202', amount: 150 }, // Main procedure
+                    { claimID: 'CLAIM-006', activityID: 'ACT-012', payerID: 'E001', code: '10060', amount: 30 },  // In list
+                    { claimID: 'CLAIM-006', activityID: 'ACT-013', payerID: 'E001', code: '10080', amount: 20 }   // In list
+                ]
+            };
+            
+            const xmlRecords = []; // No modifier 25 present
+            
+            const result = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+            
+            const passed = result.length === 1 && result[0].remarks === 'Modifier 25 required but missing';
+            const details = `Expected: 1 missing modifier record\nActual: ${result.length} records\nRemarks: ${result.length > 0 ? result[0].remarks : 'N/A'}`;
+            
+            logTest('Modifier 25 required with multiple codes from list', passed, details);
+            console.log('Result:', result);
+        }
+
+        // Run all tests
+        test1();
+        test2();
+        test3();
+        test4();
+        test5();
+        test6();
+
+        // Summary
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'test-section';
+        summaryDiv.innerHTML = `
+            <h2>Test Summary</h2>
+            <p class="${testsFailed === 0 ? 'pass' : 'fail'}">
+                Total: ${testsPassed + testsFailed} | 
+                <span class="pass">Passed: ${testsPassed}</span> | 
+                <span class="fail">Failed: ${testsFailed}</span>
+            </p>
+        `;
+        resultsDiv.appendChild(summaryDiv);
+
+        console.log('\n=== Test Summary ===');
+        console.log(`Total: ${testsPassed + testsFailed}`);
+        console.log(`Passed: ${testsPassed}`);
+        console.log(`Failed: ${testsFailed}`);
+    </script>
+</body>
+</html>

@@ -1,7 +1,15 @@
 // modifiers-xml-parser.js
 // Parses XML file to extract CPT modifier data
 
+// Debug logging flag - set to true to enable detailed console logging
+const DEBUG_MODIFIER_PARSING = true;
+
 function parseModifierXML(xmlContent) {
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log('=== Starting XML Parsing ===');
+        console.log('XML Content Length:', xmlContent.length);
+    }
+    
     // Preprocess XML to replace unescaped & with "and" for parseability
     const cleanedXml = xmlContent.replace(/&(?!(amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;))/g, "and");
     
@@ -11,20 +19,47 @@ function parseModifierXML(xmlContent) {
     // Check for parse errors
     const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
     if (parseError) {
+        if (DEBUG_MODIFIER_PARSING) {
+            console.error('XML Parse Error:', parseError.textContent);
+        }
         throw new Error('Invalid XML: ' + (parseError.textContent || 'parse error').trim());
     }
     
     const results = [];
-    const claims = Array.from(xmlDoc.getElementsByTagName('Claim'));
     
-    claims.forEach(claim => {
+    // Try to find Claim elements (case-insensitive)
+    const claims = getElementsByTagNameCaseInsensitive(xmlDoc, 'Claim');
+    
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Found ${claims.length} Claim elements in XML`);
+        if (claims.length === 0) {
+            console.warn('⚠️ No Claim/claim/CLAIM elements found. Checking root element...');
+            console.log('Root element:', xmlDoc.documentElement ? xmlDoc.documentElement.tagName : 'None');
+            if (xmlDoc.documentElement) {
+                const children = Array.from(xmlDoc.documentElement.children);
+                console.log(`Root has ${children.length} child elements:`, children.map(c => c.tagName).join(', '));
+            }
+        }
+    }
+    
+    claims.forEach((claim, claimIndex) => {
         const claimID = getTextValue(claim, 'ID');
         const payerID = getTextValue(claim, 'PayerID');
         const memberIDRaw = getTextValue(claim, 'MemberID');
         
-        // Get Encounter node - try both "Encounter" and "Encounte" (typo variation)
-        const encNode = claim.getElementsByTagName('Encounter')[0] || 
-                       claim.getElementsByTagName('Encounte')[0];
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log(`\n--- Claim ${claimIndex + 1} ---`);
+            console.log('  Claim ID:', claimID || '(empty)');
+            console.log('  Payer ID:', payerID || '(empty)');
+            console.log('  Member ID:', memberIDRaw || '(empty)');
+        }
+        
+        // Get Encounter node - try case-insensitive and typo variation
+        let encNode = getFirstElementByTagNameCaseInsensitive(claim, 'Encounter');
+        if (!encNode) {
+            // Try typo variation "Encounte"
+            encNode = getFirstElementByTagNameCaseInsensitive(claim, 'Encounte');
+        }
         
         // Get date from various possible tags in Encounter
         const encDateRaw = encNode ? (
@@ -35,10 +70,21 @@ function parseModifierXML(xmlContent) {
         ) : '';
         const encDate = normalizeDate(encDateRaw);
         
-        // Loop through Activity tags
-        const activities = Array.from(claim.getElementsByTagName('Activity'));
-        activities.forEach(activity => {
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log('  Encounter Date:', encDate || '(empty)');
+        }
+        
+        // Loop through Activity tags (case-insensitive)
+        const activities = getElementsByTagNameCaseInsensitive(claim, 'Activity');
+        
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log(`  Found ${activities.length} Activity elements`);
+        }
+        
+        activities.forEach((activity, activityIndex) => {
             const activityID = getTextValue(activity, 'ID');
+            const activityCode = extractActivityCode(activity);
+            const activityAmount = extractActivityAmount(activity);
             
             // Try different variations of OrderingClinician tag
             const clinician = firstNonEmpty([
@@ -48,16 +94,39 @@ function parseModifierXML(xmlContent) {
                 getTextValue(activity, 'OrderingClin')
             ]).trim().toUpperCase();
             
-            // Loop through Observation tags
-            const observations = Array.from(activity.getElementsByTagName('Observation'));
-            observations.forEach(observation => {
+            if (DEBUG_MODIFIER_PARSING) {
+                console.log(`    Activity ${activityIndex + 1}:`);
+                console.log('      Activity ID:', activityID || '(empty)');
+                console.log('      Activity Code:', activityCode || '(empty)');
+                console.log('      Activity Amount:', activityAmount);
+                console.log('      Clinician:', clinician || '(empty)');
+            }
+            
+            // Loop through Observation tags (case-insensitive)
+            const observations = getElementsByTagNameCaseInsensitive(activity, 'Observation');
+            
+            if (DEBUG_MODIFIER_PARSING) {
+                console.log(`      Found ${observations.length} Observation elements`);
+            }
+            
+            observations.forEach((observation, obsIndex) => {
                 const code = getTextValue(observation, 'Code');
                 const voiVal = getTextValue(observation, 'Value') || 
                               getTextValue(observation, 'ValueText') || '';
                 const valueType = getTextValue(observation, 'ValueType') || '';
                 
+                if (DEBUG_MODIFIER_PARSING) {
+                    console.log(`        Observation ${obsIndex + 1}:`);
+                    console.log('          Code:', code || '(empty)');
+                    console.log('          Value:', voiVal || '(empty)');
+                    console.log('          ValueType:', valueType || '(empty)');
+                }
+                
                 // Only accept observations with ValueType of "Modifiers"
                 if (!valueType || valueType.trim().toLowerCase() !== 'modifiers') {
+                    if (DEBUG_MODIFIER_PARSING) {
+                        console.log('          ❌ Skipped: ValueType is not "Modifiers"');
+                    }
                     return;
                 }
                 
@@ -68,14 +137,27 @@ function parseModifierXML(xmlContent) {
                     modifier = '24';
                 } else if (voiNorm === 'VOIEF1' || voiNorm === '52') {
                     modifier = '52';
+                } else if (voiNorm === '25' || voiNorm === 'VOI25') {
+                    modifier = '25';
+                } else if (voiNorm === '50' || voiNorm === 'VOI50') {
+                    modifier = '50';
                 } else {
+                    if (DEBUG_MODIFIER_PARSING) {
+                        console.log(`          ❌ Skipped: Invalid modifier value "${voiNorm}"`);
+                    }
                     return; // skip anything else
+                }
+                
+                if (DEBUG_MODIFIER_PARSING) {
+                    console.log(`          ✅ Added modifier record: ${modifier}`);
                 }
                 
                 results.push({
                     claimID: claimID,
                     memberID: normalizeMemberID(memberIDRaw),
                     activityID: activityID,
+                    activityCode: activityCode,
+                    activityAmount: activityAmount,
                     payerID: payerID,
                     clinician: clinician,
                     date: encDate,
@@ -88,9 +170,14 @@ function parseModifierXML(xmlContent) {
         });
     });
     
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`\n=== Parsing Complete ===`);
+        console.log(`Total modifier records before deduplication: ${results.length}`);
+    }
+    
     // Deduplicate rows based on key
     const seen = new Set();
-    return results.filter(r => {
+    const dedupedResults = results.filter(r => {
         const key = [r.claimID, r.activityID, r.memberID, r.modifier, r.code].join('|');
         if (seen.has(key)) {
             return false;
@@ -98,12 +185,62 @@ function parseModifierXML(xmlContent) {
         seen.add(key);
         return true;
     });
+    
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Total modifier records after deduplication: ${dedupedResults.length}`);
+        console.log('=== End XML Parsing ===\n');
+    }
+    
+    return dedupedResults;
 }
 
-// Helper function to get text value from a child element
+// Helper function to get elements by tag name (case-insensitive)
+// Tries the tag name as provided, then lowercase, then uppercase
+function getElementsByTagNameCaseInsensitive(node, tagName) {
+    if (!node || !node.getElementsByTagName) return [];
+    
+    // Try exact match first
+    let elements = Array.from(node.getElementsByTagName(tagName));
+    if (elements.length > 0) return elements;
+    
+    // Try lowercase
+    elements = Array.from(node.getElementsByTagName(tagName.toLowerCase()));
+    if (elements.length > 0) return elements;
+    
+    // Try uppercase
+    elements = Array.from(node.getElementsByTagName(tagName.toUpperCase()));
+    return elements;
+}
+
+// Helper function to get first element by tag name (case-insensitive)
+function getFirstElementByTagNameCaseInsensitive(node, tagName) {
+    const elements = getElementsByTagNameCaseInsensitive(node, tagName);
+    return elements.length > 0 ? elements[0] : null;
+}
+
+// Helper function to get text value from a child element or attribute
+// First checks for an attribute with the given name, then checks for a child element
 function getTextValue(node, tagName) {
     if (!node) return '';
-    const element = node.getElementsByTagName(tagName)[0];
+    
+    // Try to get as attribute first (check if methods exist to avoid errors)
+    if (node.getAttribute && node.hasAttribute && node.hasAttribute(tagName)) {
+        return String(node.getAttribute(tagName) || '').trim();
+    }
+    
+    // Also try lowercase and uppercase attribute names
+    const lowerTag = tagName.toLowerCase();
+    if (node.getAttribute && node.hasAttribute && node.hasAttribute(lowerTag)) {
+        return String(node.getAttribute(lowerTag) || '').trim();
+    }
+    
+    const upperTag = tagName.toUpperCase();
+    if (node.getAttribute && node.hasAttribute && node.hasAttribute(upperTag)) {
+        return String(node.getAttribute(upperTag) || '').trim();
+    }
+    
+    // Fall back to child element (case-insensitive)
+    const element = getFirstElementByTagNameCaseInsensitive(node, tagName);
     return element ? String(element.textContent || '').trim() : '';
 }
 
@@ -174,4 +311,94 @@ function toYMD(date) {
 function normalizeMemberID(memberID) {
     if (!memberID) return '';
     return String(memberID).replace(/^0+/, '').trim() || '0';
+}
+
+// Helper function to extract activity code from an Activity node
+function extractActivityCode(activity) {
+    return firstNonEmpty([
+        getTextValue(activity, 'Code'),
+        getTextValue(activity, 'ActivityCode')
+    ]).trim();
+}
+
+// Helper function to extract activity amount from an Activity node
+function extractActivityAmount(activity) {
+    return parseFloat(firstNonEmpty([
+        getTextValue(activity, 'NetAmount'),
+        getTextValue(activity, 'Net'),
+        getTextValue(activity, 'Amount')
+    ]) || '0');
+}
+
+// Parse XML to extract all activities with their codes and amounts
+// This is used for modifier 25 validation
+function parseAllActivities(xmlContent) {
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log('=== Starting parseAllActivities ===');
+    }
+    
+    // Preprocess XML to replace unescaped & with "and" for parseability
+    const cleanedXml = xmlContent.replace(/&(?!(amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;))/g, "and");
+    
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(cleanedXml, "text/xml");
+    
+    // Check for parse errors
+    const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
+    if (parseError) {
+        if (DEBUG_MODIFIER_PARSING) {
+            console.error('XML Parse Error in parseAllActivities:', parseError.textContent);
+        }
+        throw new Error('Invalid XML: ' + (parseError.textContent || 'parse error').trim());
+    }
+    
+    const activities = [];
+    
+    // Try to find Claim elements - case-insensitive
+    let claims = getElementsByTagNameCaseInsensitive(xmlDoc, 'Claim');
+    
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Found ${claims.length} claims for activity extraction`);
+    }
+    
+    claims.forEach((claim, claimIndex) => {
+        const claimID = getTextValue(claim, 'ID');
+        const payerID = getTextValue(claim, 'PayerID');
+        
+        // Loop through Activity tags (case-insensitive)
+        const activityNodes = getElementsByTagNameCaseInsensitive(claim, 'Activity');
+        
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log(`  Claim ${claimIndex + 1}: ${activityNodes.length} activities`);
+        }
+        
+        activityNodes.forEach((activity, actIdx) => {
+            const activityID = getTextValue(activity, 'ID');
+            const activityCode = extractActivityCode(activity);
+            const activityAmount = extractActivityAmount(activity);
+            
+            if (activityCode) {
+                activities.push({
+                    claimID: claimID,
+                    activityID: activityID,
+                    code: activityCode,
+                    amount: activityAmount,
+                    payerID: payerID
+                });
+                
+                if (DEBUG_MODIFIER_PARSING) {
+                    console.log(`    Activity ${actIdx + 1}: Code=${activityCode}, Amount=${activityAmount}`);
+                }
+            } else if (DEBUG_MODIFIER_PARSING) {
+                console.log(`    Activity ${actIdx + 1}: No code found, skipped`);
+            }
+        });
+    });
+    
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Total activities extracted: ${activities.length}`);
+        console.log('=== End parseAllActivities ===\n');
+    }
+    
+    return activities;
 }
