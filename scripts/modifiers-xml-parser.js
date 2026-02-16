@@ -1,7 +1,15 @@
 // modifiers-xml-parser.js
 // Parses XML file to extract CPT modifier data
 
+// Debug logging flag - set to true to enable detailed console logging
+const DEBUG_MODIFIER_PARSING = true;
+
 function parseModifierXML(xmlContent) {
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log('=== Starting XML Parsing ===');
+        console.log('XML Content Length:', xmlContent.length);
+    }
+    
     // Preprocess XML to replace unescaped & with "and" for parseability
     const cleanedXml = xmlContent.replace(/&(?!(amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;))/g, "and");
     
@@ -11,16 +19,30 @@ function parseModifierXML(xmlContent) {
     // Check for parse errors
     const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
     if (parseError) {
+        if (DEBUG_MODIFIER_PARSING) {
+            console.error('XML Parse Error:', parseError.textContent);
+        }
         throw new Error('Invalid XML: ' + (parseError.textContent || 'parse error').trim());
     }
     
     const results = [];
     const claims = Array.from(xmlDoc.getElementsByTagName('Claim'));
     
-    claims.forEach(claim => {
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Found ${claims.length} Claim elements in XML`);
+    }
+    
+    claims.forEach((claim, claimIndex) => {
         const claimID = getTextValue(claim, 'ID');
         const payerID = getTextValue(claim, 'PayerID');
         const memberIDRaw = getTextValue(claim, 'MemberID');
+        
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log(`\n--- Claim ${claimIndex + 1} ---`);
+            console.log('  Claim ID:', claimID || '(empty)');
+            console.log('  Payer ID:', payerID || '(empty)');
+            console.log('  Member ID:', memberIDRaw || '(empty)');
+        }
         
         // Get Encounter node - try both "Encounter" and "Encounte" (typo variation)
         const encNode = claim.getElementsByTagName('Encounter')[0] || 
@@ -35,9 +57,18 @@ function parseModifierXML(xmlContent) {
         ) : '';
         const encDate = normalizeDate(encDateRaw);
         
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log('  Encounter Date:', encDate || '(empty)');
+        }
+        
         // Loop through Activity tags
         const activities = Array.from(claim.getElementsByTagName('Activity'));
-        activities.forEach(activity => {
+        
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log(`  Found ${activities.length} Activity elements`);
+        }
+        
+        activities.forEach((activity, activityIndex) => {
             const activityID = getTextValue(activity, 'ID');
             const activityCode = extractActivityCode(activity);
             const activityAmount = extractActivityAmount(activity);
@@ -50,16 +81,39 @@ function parseModifierXML(xmlContent) {
                 getTextValue(activity, 'OrderingClin')
             ]).trim().toUpperCase();
             
+            if (DEBUG_MODIFIER_PARSING) {
+                console.log(`    Activity ${activityIndex + 1}:`);
+                console.log('      Activity ID:', activityID || '(empty)');
+                console.log('      Activity Code:', activityCode || '(empty)');
+                console.log('      Activity Amount:', activityAmount);
+                console.log('      Clinician:', clinician || '(empty)');
+            }
+            
             // Loop through Observation tags
             const observations = Array.from(activity.getElementsByTagName('Observation'));
-            observations.forEach(observation => {
+            
+            if (DEBUG_MODIFIER_PARSING) {
+                console.log(`      Found ${observations.length} Observation elements`);
+            }
+            
+            observations.forEach((observation, obsIndex) => {
                 const code = getTextValue(observation, 'Code');
                 const voiVal = getTextValue(observation, 'Value') || 
                               getTextValue(observation, 'ValueText') || '';
                 const valueType = getTextValue(observation, 'ValueType') || '';
                 
+                if (DEBUG_MODIFIER_PARSING) {
+                    console.log(`        Observation ${obsIndex + 1}:`);
+                    console.log('          Code:', code || '(empty)');
+                    console.log('          Value:', voiVal || '(empty)');
+                    console.log('          ValueType:', valueType || '(empty)');
+                }
+                
                 // Only accept observations with ValueType of "Modifiers"
                 if (!valueType || valueType.trim().toLowerCase() !== 'modifiers') {
+                    if (DEBUG_MODIFIER_PARSING) {
+                        console.log('          ❌ Skipped: ValueType is not "Modifiers"');
+                    }
                     return;
                 }
                 
@@ -73,7 +127,14 @@ function parseModifierXML(xmlContent) {
                 } else if (voiNorm === '25' || voiNorm === 'VOI25') {
                     modifier = '25';
                 } else {
+                    if (DEBUG_MODIFIER_PARSING) {
+                        console.log(`          ❌ Skipped: Invalid modifier value "${voiNorm}"`);
+                    }
                     return; // skip anything else
+                }
+                
+                if (DEBUG_MODIFIER_PARSING) {
+                    console.log(`          ✅ Added modifier record: ${modifier}`);
                 }
                 
                 results.push({
@@ -94,9 +155,14 @@ function parseModifierXML(xmlContent) {
         });
     });
     
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`\n=== Parsing Complete ===`);
+        console.log(`Total modifier records before deduplication: ${results.length}`);
+    }
+    
     // Deduplicate rows based on key
     const seen = new Set();
-    return results.filter(r => {
+    const dedupedResults = results.filter(r => {
         const key = [r.claimID, r.activityID, r.memberID, r.modifier, r.code].join('|');
         if (seen.has(key)) {
             return false;
@@ -104,6 +170,13 @@ function parseModifierXML(xmlContent) {
         seen.add(key);
         return true;
     });
+    
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Total modifier records after deduplication: ${dedupedResults.length}`);
+        console.log('=== End XML Parsing ===\n');
+    }
+    
+    return dedupedResults;
 }
 
 // Helper function to get text value from a child element or attribute
@@ -210,6 +283,10 @@ function extractActivityAmount(activity) {
 // Parse XML to extract all activities with their codes and amounts
 // This is used for modifier 25 validation
 function parseAllActivities(xmlContent) {
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log('=== Starting parseAllActivities ===');
+    }
+    
     // Preprocess XML to replace unescaped & with "and" for parseability
     const cleanedXml = xmlContent.replace(/&(?!(amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;))/g, "and");
     
@@ -219,19 +296,31 @@ function parseAllActivities(xmlContent) {
     // Check for parse errors
     const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
     if (parseError) {
+        if (DEBUG_MODIFIER_PARSING) {
+            console.error('XML Parse Error in parseAllActivities:', parseError.textContent);
+        }
         throw new Error('Invalid XML: ' + (parseError.textContent || 'parse error').trim());
     }
     
     const activities = [];
     const claims = Array.from(xmlDoc.getElementsByTagName('Claim'));
     
-    claims.forEach(claim => {
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Found ${claims.length} claims for activity extraction`);
+    }
+    
+    claims.forEach((claim, claimIndex) => {
         const claimID = getTextValue(claim, 'ID');
         const payerID = getTextValue(claim, 'PayerID');
         
         // Loop through Activity tags
         const activityNodes = Array.from(claim.getElementsByTagName('Activity'));
-        activityNodes.forEach(activity => {
+        
+        if (DEBUG_MODIFIER_PARSING) {
+            console.log(`  Claim ${claimIndex + 1}: ${activityNodes.length} activities`);
+        }
+        
+        activityNodes.forEach((activity, actIdx) => {
             const activityID = getTextValue(activity, 'ID');
             const activityCode = extractActivityCode(activity);
             const activityAmount = extractActivityAmount(activity);
@@ -244,9 +333,20 @@ function parseAllActivities(xmlContent) {
                     amount: activityAmount,
                     payerID: payerID
                 });
+                
+                if (DEBUG_MODIFIER_PARSING) {
+                    console.log(`    Activity ${actIdx + 1}: Code=${activityCode}, Amount=${activityAmount}`);
+                }
+            } else if (DEBUG_MODIFIER_PARSING) {
+                console.log(`    Activity ${actIdx + 1}: No code found, skipped`);
             }
         });
     });
+    
+    if (DEBUG_MODIFIER_PARSING) {
+        console.log(`Total activities extracted: ${activities.length}`);
+        console.log('=== End parseAllActivities ===\n');
+    }
     
     return activities;
 }

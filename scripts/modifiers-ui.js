@@ -1,6 +1,9 @@
 // modifiers-ui.js
 // UI handling for CPT Modifiers Validation Checker
 
+// Debug logging flag - set to true to enable detailed console logging
+const DEBUG_MODIFIER_UI = true;
+
 let modifierValidationResults = [];
 
 // Main function to run the modifier check
@@ -8,6 +11,13 @@ async function runModifierCheck() {
     const xmlFile = document.getElementById('modifierXmlFile').files[0];
     const excelFile = document.getElementById('modifierExcelFile').files[0];
     const modifierCodesFile = document.getElementById('modifierCodesFile').files[0];
+    
+    if (DEBUG_MODIFIER_UI) {
+        console.log('=== Run Modifier Check Started ===');
+        console.log('XML File:', xmlFile ? xmlFile.name : 'Not selected');
+        console.log('Excel File:', excelFile ? excelFile.name : 'Not selected');
+        console.log('Modifier Codes File:', modifierCodesFile ? modifierCodesFile.name : 'Not selected');
+    }
     
     // Validate file selection
     if (!xmlFile || !excelFile) {
@@ -19,22 +29,56 @@ async function runModifierCheck() {
         showModifierStatus('Processing files...', 'info');
         
         // Read XML file
+        if (DEBUG_MODIFIER_UI) {
+            console.log('\n--- Reading XML file ---');
+        }
         const xmlContent = await readFileAsText(xmlFile);
+        
+        if (DEBUG_MODIFIER_UI) {
+            console.log('XML content length:', xmlContent.length);
+            console.log('First 500 chars:', xmlContent.substring(0, 500));
+        }
+        
         const xmlRecords = parseModifierXML(xmlContent);
         
+        if (DEBUG_MODIFIER_UI) {
+            console.log(`\nModifier records found: ${xmlRecords.length}`);
+            if (xmlRecords.length > 0) {
+                console.log('First record:', xmlRecords[0]);
+            }
+        }
+        
         if (xmlRecords.length === 0) {
+            if (DEBUG_MODIFIER_UI) {
+                console.warn('⚠️ No modifier records found in XML file');
+            }
             showModifierStatus('No modifier records found in XML file. Total claims parsed: 0', 'warning');
             return;
         }
         
         // Parse all activities from XML for modifier 25 checking
+        if (DEBUG_MODIFIER_UI) {
+            console.log('\n--- Parsing all activities ---');
+        }
         const allActivities = parseAllActivities(xmlContent);
         
+        if (DEBUG_MODIFIER_UI) {
+            console.log(`All activities found: ${allActivities.length}`);
+        }
+        
         // Read Excel file
+        if (DEBUG_MODIFIER_UI) {
+            console.log('\n--- Reading Excel eligibility file ---');
+        }
         const excelContent = await readFileAsBinary(excelFile);
         const eligibilityData = parseModifierExcel(excelContent);
         
         const eligibilityCount = Object.keys(eligibilityData.index).length;
+        
+        if (DEBUG_MODIFIER_UI) {
+            console.log(`Eligibility records found: ${eligibilityCount}`);
+        }
+        
         if (eligibilityCount === 0) {
             showModifierStatus(`No eligibility records found in Excel file. Total claims parsed: ${xmlRecords.length}, Total eligibilities: 0`, 'warning');
             return;
@@ -43,9 +87,16 @@ async function runModifierCheck() {
         // Read modifier codes file if provided
         let modifierCodesMap = null;
         if (modifierCodesFile) {
+            if (DEBUG_MODIFIER_UI) {
+                console.log('\n--- Reading Modifier Codes file ---');
+            }
             try {
                 const modifierCodesContent = await readFileAsBinary(modifierCodesFile);
                 modifierCodesMap = parseModifierCodesExcel(modifierCodesContent);
+                
+                if (DEBUG_MODIFIER_UI) {
+                    console.log('Modifier codes map loaded:', modifierCodesMap);
+                }
             } catch (error) {
                 console.warn('Error parsing modifier codes file:', error);
                 showModifierStatus(`Warning: Could not parse modifier codes file. Continuing without it. Error: ${error.message}`, 'warning');
@@ -53,7 +104,14 @@ async function runModifierCheck() {
         }
         
         // Validate records
+        if (DEBUG_MODIFIER_UI) {
+            console.log('\n--- Validating modifier records ---');
+        }
         modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
+        
+        if (DEBUG_MODIFIER_UI) {
+            console.log(`Validation results: ${modifierValidationResults.length} records`);
+        }
         
         if (modifierValidationResults.length === 0) {
             showModifierStatus(`No records matched the filter criteria (PayerID A001 or E001). Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
