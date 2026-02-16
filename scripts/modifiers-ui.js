@@ -209,6 +209,17 @@ function displayModifierResults(results) {
     const tbody = document.getElementById('modifierResultsBody');
     tbody.innerHTML = '';
     
+    if (DEBUG_MODIFIER_UI) {
+        console.log('\n=== displayModifierResults ===');
+        console.log(`Total results to display: ${results.length}`);
+        console.log('First 3 results:', results.slice(0, 3).map(r => ({
+            claimID: r.claimID,
+            memberID: r.memberID,
+            modifier: r.modifier,
+            isValid: r.isValid
+        })));
+    }
+    
     // Remove the old checkbox filter
     const filterInvalidOnly = false; // Deprecated - using new badge filters instead
     
@@ -238,10 +249,18 @@ function displayModifierResults(results) {
         }
     }
     
+    if (DEBUG_MODIFIER_UI) {
+        console.log('Status counts:', statusCounts);
+        console.log('Status filters:', statusFilters);
+    }
+    
     // Update count badges
     document.getElementById('validCount').textContent = statusCounts.valid;
     document.getElementById('invalidCount').textContent = statusCounts.invalid;
     document.getElementById('unknownCount').textContent = statusCounts.unknown;
+    
+    let rowsRendered = 0;
+    let rowsSkippedByFilter = 0;
     
     for (let i = 0; i < results.length; i++) {
         const record = results[i];
@@ -258,6 +277,10 @@ function displayModifierResults(results) {
         
         // Apply status filter - skip if this status is disabled
         if (!statusFilters[status]) {
+            rowsSkippedByFilter++;
+            if (DEBUG_MODIFIER_UI && i < 5) {
+                console.log(`Row ${i}: Skipped by filter (status=${status})`);
+            }
             continue;
         }
         
@@ -298,6 +321,12 @@ function displayModifierResults(results) {
         `;
         
         tbody.appendChild(row);
+        rowsRendered++;
+    }
+    
+    if (DEBUG_MODIFIER_UI) {
+        console.log(`Rows rendered: ${rowsRendered}, Rows skipped by filter: ${rowsSkippedByFilter}`);
+        console.log('=== End displayModifierResults ===\n');
     }
     
     // Show results container
