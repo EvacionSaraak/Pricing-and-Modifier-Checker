@@ -6,6 +6,13 @@ const DEBUG_MODIFIER_UI = true;
 
 let modifierValidationResults = [];
 
+// Status filter state - track which statuses are enabled
+let statusFilters = {
+    valid: true,
+    invalid: true,
+    unknown: true
+};
+
 // Loading screen functions
 function showLoadingScreen() {
     const loadingOverlay = document.getElementById('loadingOverlay');
@@ -19,6 +26,27 @@ function hideLoadingScreen() {
     if (loadingOverlay) {
         loadingOverlay.style.display = 'none';
     }
+}
+
+// Toggle status filter
+function toggleStatusFilter(status) {
+    // Toggle the filter state
+    statusFilters[status] = !statusFilters[status];
+    
+    // Update badge visual state
+    const badgeId = `filter${status.charAt(0).toUpperCase() + status.slice(1)}Badge`;
+    const badge = document.getElementById(badgeId);
+    
+    if (badge) {
+        if (statusFilters[status]) {
+            badge.classList.remove('disabled');
+        } else {
+            badge.classList.add('disabled');
+        }
+    }
+    
+    // Re-display results with new filter
+    displayModifierResults(modifierValidationResults);
 }
 
 // Main function to run the modifier check
@@ -167,7 +195,8 @@ function displayModifierResults(results) {
     const tbody = document.getElementById('modifierResultsBody');
     tbody.innerHTML = '';
     
-    const filterInvalidOnly = document.getElementById('filterInvalidOnly')?.checked || false;
+    // Remove the old checkbox filter
+    const filterInvalidOnly = false; // Deprecated - using new badge filters instead
     
     // Track displayed claim IDs per status (for deduplication)
     const displayedClaimIDs = {
@@ -176,13 +205,32 @@ function displayModifierResults(results) {
         'unknown': new Set()
     };
     
+    // Count records by status
+    const statusCounts = {
+        valid: 0,
+        invalid: 0,
+        unknown: 0
+    };
+    
+    // First pass: count all records by status
     for (let i = 0; i < results.length; i++) {
         const record = results[i];
-        
-        // Apply filter if checkbox is checked
-        if (filterInvalidOnly && record.isValid === true) {
-            continue;
+        if (record.isValid === true) {
+            statusCounts.valid++;
+        } else if (record.isValid === 'unknown') {
+            statusCounts.unknown++;
+        } else {
+            statusCounts.invalid++;
         }
+    }
+    
+    // Update count badges
+    document.getElementById('validCount').textContent = statusCounts.valid;
+    document.getElementById('invalidCount').textContent = statusCounts.invalid;
+    document.getElementById('unknownCount').textContent = statusCounts.unknown;
+    
+    for (let i = 0; i < results.length; i++) {
+        const record = results[i];
         
         // Determine status for tracking
         let status;
@@ -192,6 +240,11 @@ function displayModifierResults(results) {
             status = 'unknown';
         } else {
             status = 'invalid';
+        }
+        
+        // Apply status filter - skip if this status is disabled
+        if (!statusFilters[status]) {
+            continue;
         }
         
         // Check if claim ID already displayed for this status
@@ -235,11 +288,6 @@ function displayModifierResults(results) {
     
     // Show results container
     document.getElementById('modifierResultsContainer').style.display = 'block';
-}
-
-// Toggle filter for invalid rows only
-function toggleInvalidFilter() {
-    displayModifierResults(modifierValidationResults);
 }
 
 // View eligibility details in modal

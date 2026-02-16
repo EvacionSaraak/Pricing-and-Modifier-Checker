@@ -423,3 +423,28 @@ body {
     font-size: 0.875rem;
 }
 
+
+/* Status Filter Badges */
+.status-filter-badge {
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.status-filter-badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.status-filter-badge:active {
+    transform: scale(0.98);
+}
+
+.status-filter-badge.disabled {
+    opacity: 0.3;
+    text-decoration: line-through;
+    filter: grayscale(80%);
+}
+
+.status-filter-badge.disabled:hover {
+    opacity: 0.5;
+}

@@ -7,3 +7,4 @@ test-modifier-50-no-elig.html
 test-modifier-changes.html
 test-payerid-unknown.html
 test-claim-dedup-loading.html
+test-status-filters.html
