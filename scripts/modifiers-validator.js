@@ -275,7 +275,7 @@ function checkModifier25Requirement(record, claimActivitiesMap) {
         // Accept modifier 25 as valid even if not strictly required
         return { 
             valid: true, 
-            message: 'Valid (modifier 25 present, not strictly required)' 
+            message: 'Valid' 
         };
     }
     
