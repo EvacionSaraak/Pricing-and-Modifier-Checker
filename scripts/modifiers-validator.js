@@ -272,10 +272,10 @@ function checkModifier25Requirement(record, claimActivitiesMap) {
     
     if (!hasOtherActivitiesRequiringModifier25) {
         // Main procedure exists but no other activities requiring modifier 25
-        // Modifier 25 is NOT required and should NOT be present
+        // Accept modifier 25 as valid even if not strictly required
         return { 
-            valid: false, 
-            message: 'Modifier 25 present but not required (no other activities with amount > 0)' 
+            valid: true, 
+            message: 'Valid (modifier 25 present, not strictly required)' 
         };
     }
     
