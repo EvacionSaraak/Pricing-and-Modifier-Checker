@@ -26,10 +26,20 @@ function parseModifierXML(xmlContent) {
     }
     
     const results = [];
-    const claims = Array.from(xmlDoc.getElementsByTagName('Claim'));
+    
+    // Try to find Claim elements (case-insensitive)
+    const claims = getElementsByTagNameCaseInsensitive(xmlDoc, 'Claim');
     
     if (DEBUG_MODIFIER_PARSING) {
         console.log(`Found ${claims.length} Claim elements in XML`);
+        if (claims.length === 0) {
+            console.warn('⚠️ No Claim/claim/CLAIM elements found. Checking root element...');
+            console.log('Root element:', xmlDoc.documentElement ? xmlDoc.documentElement.tagName : 'None');
+            if (xmlDoc.documentElement) {
+                const children = Array.from(xmlDoc.documentElement.children);
+                console.log(`Root has ${children.length} child elements:`, children.map(c => c.tagName).join(', '));
+            }
+        }
     }
     
     claims.forEach((claim, claimIndex) => {
@@ -44,9 +54,12 @@ function parseModifierXML(xmlContent) {
             console.log('  Member ID:', memberIDRaw || '(empty)');
         }
         
-        // Get Encounter node - try both "Encounter" and "Encounte" (typo variation)
-        const encNode = claim.getElementsByTagName('Encounter')[0] || 
-                       claim.getElementsByTagName('Encounte')[0];
+        // Get Encounter node - try case-insensitive and typo variation
+        let encNode = getFirstElementByTagNameCaseInsensitive(claim, 'Encounter');
+        if (!encNode) {
+            // Try typo variation "Encounte"
+            encNode = getFirstElementByTagNameCaseInsensitive(claim, 'Encounte');
+        }
         
         // Get date from various possible tags in Encounter
         const encDateRaw = encNode ? (
@@ -61,8 +74,8 @@ function parseModifierXML(xmlContent) {
             console.log('  Encounter Date:', encDate || '(empty)');
         }
         
-        // Loop through Activity tags
-        const activities = Array.from(claim.getElementsByTagName('Activity'));
+        // Loop through Activity tags (case-insensitive)
+        const activities = getElementsByTagNameCaseInsensitive(claim, 'Activity');
         
         if (DEBUG_MODIFIER_PARSING) {
             console.log(`  Found ${activities.length} Activity elements`);
@@ -89,8 +102,8 @@ function parseModifierXML(xmlContent) {
                 console.log('      Clinician:', clinician || '(empty)');
             }
             
-            // Loop through Observation tags
-            const observations = Array.from(activity.getElementsByTagName('Observation'));
+            // Loop through Observation tags (case-insensitive)
+            const observations = getElementsByTagNameCaseInsensitive(activity, 'Observation');
             
             if (DEBUG_MODIFIER_PARSING) {
                 console.log(`      Found ${observations.length} Observation elements`);
@@ -179,6 +192,30 @@ function parseModifierXML(xmlContent) {
     return dedupedResults;
 }
 
+// Helper function to get elements by tag name (case-insensitive)
+// Tries the tag name as provided, then lowercase, then uppercase
+function getElementsByTagNameCaseInsensitive(node, tagName) {
+    if (!node || !node.getElementsByTagName) return [];
+    
+    // Try exact match first
+    let elements = Array.from(node.getElementsByTagName(tagName));
+    if (elements.length > 0) return elements;
+    
+    // Try lowercase
+    elements = Array.from(node.getElementsByTagName(tagName.toLowerCase()));
+    if (elements.length > 0) return elements;
+    
+    // Try uppercase
+    elements = Array.from(node.getElementsByTagName(tagName.toUpperCase()));
+    return elements;
+}
+
+// Helper function to get first element by tag name (case-insensitive)
+function getFirstElementByTagNameCaseInsensitive(node, tagName) {
+    const elements = getElementsByTagNameCaseInsensitive(node, tagName);
+    return elements.length > 0 ? elements[0] : null;
+}
+
 // Helper function to get text value from a child element or attribute
 // First checks for an attribute with the given name, then checks for a child element
 function getTextValue(node, tagName) {
@@ -189,8 +226,19 @@ function getTextValue(node, tagName) {
         return String(node.getAttribute(tagName) || '').trim();
     }
     
-    // Fall back to child element
-    const element = node.getElementsByTagName(tagName)[0];
+    // Also try lowercase and uppercase attribute names
+    const lowerTag = tagName.toLowerCase();
+    if (node.getAttribute && node.hasAttribute && node.hasAttribute(lowerTag)) {
+        return String(node.getAttribute(lowerTag) || '').trim();
+    }
+    
+    const upperTag = tagName.toUpperCase();
+    if (node.getAttribute && node.hasAttribute && node.hasAttribute(upperTag)) {
+        return String(node.getAttribute(upperTag) || '').trim();
+    }
+    
+    // Fall back to child element (case-insensitive)
+    const element = getFirstElementByTagNameCaseInsensitive(node, tagName);
     return element ? String(element.textContent || '').trim() : '';
 }
 
@@ -303,7 +351,9 @@ function parseAllActivities(xmlContent) {
     }
     
     const activities = [];
-    const claims = Array.from(xmlDoc.getElementsByTagName('Claim'));
+    
+    // Try to find Claim elements - case-insensitive
+    let claims = getElementsByTagNameCaseInsensitive(xmlDoc, 'Claim');
     
     if (DEBUG_MODIFIER_PARSING) {
         console.log(`Found ${claims.length} claims for activity extraction`);
@@ -313,8 +363,8 @@ function parseAllActivities(xmlContent) {
         const claimID = getTextValue(claim, 'ID');
         const payerID = getTextValue(claim, 'PayerID');
         
-        // Loop through Activity tags
-        const activityNodes = Array.from(claim.getElementsByTagName('Activity'));
+        // Loop through Activity tags (case-insensitive)
+        const activityNodes = getElementsByTagNameCaseInsensitive(claim, 'Activity');
         
         if (DEBUG_MODIFIER_PARSING) {
             console.log(`  Claim ${claimIndex + 1}: ${activityNodes.length} activities`);
