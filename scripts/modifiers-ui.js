@@ -1,6 +1,10 @@
 // modifiers-ui.js
 // UI handling for CPT Modifiers Validation Checker
 
+// Script version for cache debugging
+const SCRIPT_VERSION = '2.1.0';
+console.log(`🔧 Modifiers UI Script Loaded - Version ${SCRIPT_VERSION} - ${new Date().toISOString()}`);
+
 // Debug logging flag - set to true to enable detailed console logging
 const DEBUG_MODIFIER_UI = true;
 
@@ -88,41 +92,42 @@ async function runModifierCheck() {
         let xmlRecords;
         try {
             xmlRecords = parseModifierXML(xmlContent);
-            if (DEBUG_MODIFIER_UI) {
-                console.log(`\nModifier records found: ${xmlRecords.length}`);
-                if (xmlRecords.length > 0) {
-                    console.log('First record:', xmlRecords[0]);
-                }
+            // ALWAYS log record count (critical for debugging)
+            console.log(`✅ Modifier records found: ${xmlRecords.length}`);
+            if (DEBUG_MODIFIER_UI && xmlRecords.length > 0) {
+                console.log('First record:', xmlRecords[0]);
             }
         } catch (parseError) {
-            console.error('Error parsing XML for modifier records:', parseError);
+            // ALWAYS log parse errors (critical for debugging)
+            console.error('❌ CRITICAL ERROR parsing XML for modifier records:', parseError);
+            console.error('Error stack:', parseError.stack);
+            alert(`Failed to parse XML file for modifiers. Check console for details.\n\nError: ${parseError.message}`);
             throw parseError; // Re-throw to be caught by outer try-catch
         }
         
         if (xmlRecords.length === 0) {
-            if (DEBUG_MODIFIER_UI) {
-                console.warn('⚠️ No modifier records found in XML file');
-            }
+            // ALWAYS warn about no records (critical for debugging)
+            console.warn('⚠️ No modifier records found in XML file');
             hideLoadingScreen();
             showModifierStatus('No modifier records found in XML file. Total claims parsed: 0', 'warning');
             return;
         }
         
         // Parse all activities from XML for modifier 25 checking
-        if (DEBUG_MODIFIER_UI) {
-            console.log('\n--- Parsing all activities ---');
-        }
+        console.log('\n--- Parsing all activities ---');
         let allActivities;
         try {
             allActivities = parseAllActivities(xmlContent);
-            if (DEBUG_MODIFIER_UI) {
-                console.log(`All activities found: ${allActivities.length}`);
-                if (allActivities.length > 0) {
-                    console.log('Sample activities:', allActivities.slice(0, 3));
-                }
+            // ALWAYS log activity count (critical for debugging)
+            console.log(`✅ All activities found: ${allActivities.length}`);
+            if (DEBUG_MODIFIER_UI && allActivities.length > 0) {
+                console.log('Sample activities:', allActivities.slice(0, 3));
             }
         } catch (parseError) {
-            console.error('Error parsing XML for all activities:', parseError);
+            // ALWAYS log parse errors (critical for debugging)
+            console.error('❌ CRITICAL ERROR parsing XML for all activities:', parseError);
+            console.error('Error stack:', parseError.stack);
+            alert(`Failed to parse XML file for activities. Check console for details.\n\nError: ${parseError.message}`);
             throw parseError; // Re-throw to be caught by outer try-catch
         }
         
@@ -165,13 +170,13 @@ async function runModifierCheck() {
         }
         
         // Validate records
-        if (DEBUG_MODIFIER_UI) {
-            console.log('\n--- Validating modifier records ---');
-        }
+        console.log('\n--- Validating modifier records ---');
         modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
         
-        if (DEBUG_MODIFIER_UI) {
-            console.log(`Validation results: ${modifierValidationResults.length} records`);
+        // ALWAYS log validation results count (critical for debugging)
+        console.log(`✅ Validation results: ${modifierValidationResults.length} records`);
+        if (DEBUG_MODIFIER_UI && modifierValidationResults.length > 0) {
+            console.log('First 3 validation results:', modifierValidationResults.slice(0, 3));
         }
         
         if (modifierValidationResults.length === 0) {
@@ -181,6 +186,7 @@ async function runModifierCheck() {
         }
         
         // Display results
+        console.log('\n--- Displaying results in table ---');
         displayModifierResults(modifierValidationResults);
         
         // Enable download button
@@ -197,9 +203,12 @@ async function runModifierCheck() {
         hideLoadingScreen();
         
     } catch (error) {
-        console.error('Error processing files:', error);
+        // ALWAYS log errors (critical for debugging)
+        console.error('❌ CRITICAL ERROR processing files:', error);
+        console.error('Error details:', error.message);
         console.error('Error stack:', error.stack);
         hideLoadingScreen();
+        alert(`Critical error occurred during processing. Check console for details.\n\nError: ${error.message}`);
         showModifierStatus(`Error: ${error.message}`, 'danger');
     }
 }
