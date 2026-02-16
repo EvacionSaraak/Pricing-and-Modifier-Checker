@@ -134,14 +134,14 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
     
     const missingRecords = [];
     
-    // If no modifier codes map provided, we can't determine which codes require modifier 25
-    // So we don't flag any missing modifiers (safer to avoid false positives)
-    if (!modifierCodesMap || !modifierCodesMap['25'] || modifierCodesMap['25'].length === 0) {
-        return missingRecords;
-    }
+    // Determine if we should check all activities or only specific codes from Modifiers.xlsx
+    const shouldCheckAllActivities = !modifierCodesMap || !modifierCodesMap['25'] || modifierCodesMap['25'].length === 0;
     
-    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file
-    const modifier25RequiredCodes = new Set(modifierCodesMap['25']);
+    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file (if provided)
+    let modifier25RequiredCodes = new Set();
+    if (!shouldCheckAllActivities) {
+        modifier25RequiredCodes = new Set(modifierCodesMap['25']);
+    }
     
     // Build a set of claimIDs that already have modifier 25
     const claimsWithModifier25 = new Set();
@@ -173,15 +173,27 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
             continue; // No main procedure, modifier 25 not relevant
         }
         
-        // Check if OTHER activities that are in the modifier 25 list have amount > 0
-        // This is the key change: only check for codes that are in Modifiers.xlsx Column A with "25" in Column B
+        // Check if OTHER activities have amount > 0
+        // If no Modifiers.xlsx: check ANY other activity
+        // If Modifiers.xlsx provided: check only codes listed in it
         let hasOtherActivitiesRequiringModifier25 = false;
-        for (const activity of activities) {
-            if (!MAIN_PROCEDURE_CODES.has(activity.code) && 
-                activity.amount > 0 &&
-                modifier25RequiredCodes.has(activity.code)) {
-                hasOtherActivitiesRequiringModifier25 = true;
-                break;
+        if (shouldCheckAllActivities) {
+            // No Modifiers.xlsx file - check ANY other activity with amount > 0
+            for (const activity of activities) {
+                if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
+                    hasOtherActivitiesRequiringModifier25 = true;
+                    break;
+                }
+            }
+        } else {
+            // Modifiers.xlsx provided - check only codes listed in it
+            for (const activity of activities) {
+                if (!MAIN_PROCEDURE_CODES.has(activity.code) && 
+                    activity.amount > 0 &&
+                    modifier25RequiredCodes.has(activity.code)) {
+                    hasOtherActivitiesRequiringModifier25 = true;
+                    break;
+                }
             }
         }
         
@@ -239,22 +251,33 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
         };
     }
     
-    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file
-    // If no modifierCodesMap provided, we'll accept modifier 25 as valid (backward compatible)
+    // Determine if we should check all activities or only specific codes from Modifiers.xlsx
+    const shouldCheckAllActivities = !modifierCodesMap || !modifierCodesMap['25'] || modifierCodesMap['25'].length === 0;
+    
+    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file (if provided)
     let modifier25RequiredCodes = new Set();
-    if (modifierCodesMap && modifierCodesMap['25']) {
+    if (!shouldCheckAllActivities) {
         modifier25RequiredCodes = new Set(modifierCodesMap['25']);
     }
     
-    // Check if OTHER activities that are in the modifier 25 list have amount > 0
-    // If no Modifiers.xlsx file, check for ANY other activities (backward compatible)
+    // Check if OTHER activities have amount > 0
+    // If no Modifiers.xlsx: check ANY other activity
+    // If Modifiers.xlsx provided: check only codes listed in it
     let hasOtherActivitiesRequiringModifier25 = false;
-    for (const activity of claimActivities) {
-        // Skip main procedure codes - we're looking for OTHER activities
-        if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
-            // If we have a modifier codes map, check if this code is in the list
-            // If no map, accept any other activity
-            if (modifier25RequiredCodes.size === 0 || modifier25RequiredCodes.has(activity.code)) {
+    if (shouldCheckAllActivities) {
+        // No Modifiers.xlsx file - check ANY other activity with amount > 0
+        for (const activity of claimActivities) {
+            if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
+                hasOtherActivitiesRequiringModifier25 = true;
+                break;
+            }
+        }
+    } else {
+        // Modifiers.xlsx provided - check only codes listed in it
+        for (const activity of claimActivities) {
+            if (!MAIN_PROCEDURE_CODES.has(activity.code) && 
+                activity.amount > 0 &&
+                modifier25RequiredCodes.has(activity.code)) {
                 hasOtherActivitiesRequiringModifier25 = true;
                 break;
             }
