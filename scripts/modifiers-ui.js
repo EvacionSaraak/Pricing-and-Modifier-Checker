@@ -6,6 +6,21 @@ const DEBUG_MODIFIER_UI = true;
 
 let modifierValidationResults = [];
 
+// Loading screen functions
+function showLoadingScreen() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+    }
+}
+
+function hideLoadingScreen() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+}
+
 // Main function to run the modifier check
 async function runModifierCheck() {
     const xmlFile = document.getElementById('modifierXmlFile').files[0];
@@ -26,6 +41,9 @@ async function runModifierCheck() {
     }
     
     try {
+        // Show loading screen
+        showLoadingScreen();
+        
         showModifierStatus('Processing files...', 'info');
         
         // Read XML file
@@ -52,6 +70,7 @@ async function runModifierCheck() {
             if (DEBUG_MODIFIER_UI) {
                 console.warn('⚠️ No modifier records found in XML file');
             }
+            hideLoadingScreen();
             showModifierStatus('No modifier records found in XML file. Total claims parsed: 0', 'warning');
             return;
         }
@@ -80,6 +99,7 @@ async function runModifierCheck() {
         }
         
         if (eligibilityCount === 0) {
+            hideLoadingScreen();
             showModifierStatus(`No eligibility records found in Excel file. Total claims parsed: ${xmlRecords.length}, Total eligibilities: 0`, 'warning');
             return;
         }
@@ -114,6 +134,7 @@ async function runModifierCheck() {
         }
         
         if (modifierValidationResults.length === 0) {
+            hideLoadingScreen();
             showModifierStatus(`No records found after validation. Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
             return;
         }
@@ -131,8 +152,12 @@ async function runModifierCheck() {
             'success'
         );
         
+        // Hide loading screen
+        hideLoadingScreen();
+        
     } catch (error) {
         console.error('Error processing files:', error);
+        hideLoadingScreen();
         showModifierStatus(`Error: ${error.message}`, 'danger');
     }
 }
@@ -144,12 +169,38 @@ function displayModifierResults(results) {
     
     const filterInvalidOnly = document.getElementById('filterInvalidOnly')?.checked || false;
     
+    // Track displayed claim IDs per status (for deduplication)
+    const displayedClaimIDs = {
+        'valid': new Set(),
+        'invalid': new Set(),
+        'unknown': new Set()
+    };
+    
     for (let i = 0; i < results.length; i++) {
         const record = results[i];
         
         // Apply filter if checkbox is checked
         if (filterInvalidOnly && record.isValid === true) {
             continue;
+        }
+        
+        // Determine status for tracking
+        let status;
+        if (record.isValid === true) {
+            status = 'valid';
+        } else if (record.isValid === 'unknown') {
+            status = 'unknown';
+        } else {
+            status = 'invalid';
+        }
+        
+        // Check if claim ID already displayed for this status
+        const claimID = record.claimID;
+        const shouldDisplayClaimID = !displayedClaimIDs[status].has(claimID);
+        
+        // Mark this claim ID as displayed for this status
+        if (shouldDisplayClaimID) {
+            displayedClaimIDs[status].add(claimID);
         }
         
         const row = document.createElement('tr');
@@ -163,7 +214,7 @@ function displayModifierResults(results) {
         }
         
         row.innerHTML = `
-            <td>${escapeHtml(record.claimID)}</td>
+            <td>${shouldDisplayClaimID ? escapeHtml(record.claimID) : ''}</td>
             <td>${escapeHtml(record.memberID)}</td>
             <td>${escapeHtml(record.activityID)}</td>
             <td>${escapeHtml(record.clinician)}</td>
