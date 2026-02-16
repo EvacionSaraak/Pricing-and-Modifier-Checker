@@ -7,6 +7,9 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
     // Build a map of claim activities for modifier 25 checking
     const claimActivitiesMap = buildClaimActivitiesMap(allActivities || []);
     
+    // Check for missing modifier 25 requirements
+    const missingModifier25 = checkForMissingModifier25(claimActivitiesMap, xmlRecords);
+    
     for (let record of xmlRecords) {
         // Build matching key
         const normalizedMemberID = normalizeMemberID(record.memberID);
@@ -29,7 +32,7 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
             validationResult.remarks.push(`Code is "${record.code}", expected "CPT modifier"`);
         }
         
-        // Check 2: Eligibility match (required for all modifiers except 50)
+        // Check 2: Eligibility match (required for all modifiers)
         const eligibilityMatches = eligibilityData.index[key];
         let eligibilityMatch = null;
         
@@ -44,16 +47,12 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
             }
         }
         
-        // Modifier 50 (bilateral procedure) doesn't require eligibility match
-        if (!eligibilityMatch && record.modifier !== '50') {
+        if (!eligibilityMatch) {
             validationResult.isValid = false;
             validationResult.remarks.push('No eligibility match found');
             validationResult.eligibility = null;
-        } else if (eligibilityMatch) {
-            validationResult.eligibility = eligibilityMatch;
         } else {
-            // Modifier 50 without eligibility match
-            validationResult.eligibility = null;
+            validationResult.eligibility = eligibilityMatch;
         }
         
         // Check 3: Modifier VOI compatibility
@@ -69,15 +68,12 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
         if (record.modifier === '24' && voiNorm !== 'VOID' && voiNorm !== '24') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 24 does not match VOI (expected VOI_D)`);
-        } else if (record.modifier === '50' && voiNorm !== '50' && voiNorm !== 'VOI50') {
-            validationResult.isValid = false;
-            validationResult.remarks.push(`Modifier 50 does not match VOI (expected 50 or VOI_50)`);
         } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
         } else if (record.modifier === '25') {
             // Modifier 25 validation - check if it's properly applied
-            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap);
+            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap);
             if (!modifier25Check.valid) {
                 validationResult.isValid = false;
                 validationResult.remarks.push(modifier25Check.message);
@@ -92,6 +88,11 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
         }
         
         validatedRecords.push(validationResult);
+    }
+    
+    // Add validation records for claims that are MISSING modifier 25 when they should have it
+    for (const missingRecord of missingModifier25) {
+        validatedRecords.push(missingRecord);
     }
     
     return validatedRecords;
@@ -114,8 +115,79 @@ function buildClaimActivitiesMap(allActivities) {
     return map;
 }
 
+// Check for claims that are MISSING modifier 25 when they should have it
+function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
+    const MAIN_PROCEDURE_CODES = new Set([
+        '99202', '99203', '99212', '99213',
+        '92002', '92004', '92012', '92014'
+    ]);
+    
+    const missingRecords = [];
+    
+    // Build a set of claimIDs that already have modifier 25
+    const claimsWithModifier25 = new Set();
+    for (const record of xmlRecords) {
+        if (record.modifier === '25') {
+            claimsWithModifier25.add(record.claimID);
+        }
+    }
+    
+    // Check each claim to see if it needs modifier 25
+    for (const [claimID, activities] of Object.entries(claimActivitiesMap)) {
+        // Skip if this claim already has modifier 25
+        if (claimsWithModifier25.has(claimID)) {
+            continue;
+        }
+        
+        // Check if any main procedure code has amount > 0
+        let hasMainProcedure = false;
+        let mainProcedureActivity = null;
+        for (const activity of activities) {
+            if (MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
+                hasMainProcedure = true;
+                mainProcedureActivity = activity;
+                break;
+            }
+        }
+        
+        if (!hasMainProcedure) {
+            continue; // No main procedure, modifier 25 not relevant
+        }
+        
+        // Check if OTHER activities (non-main procedure codes) have amount > 0
+        let hasOtherActivities = false;
+        for (const activity of activities) {
+            if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
+                hasOtherActivities = true;
+                break;
+            }
+        }
+        
+        if (hasOtherActivities) {
+            // This claim NEEDS modifier 25 but doesn't have it
+            // Create a validation record for this missing modifier
+            missingRecords.push({
+                claimID: claimID,
+                activityID: mainProcedureActivity.activityID,
+                payerID: mainProcedureActivity.payerID,
+                code: 'CPT modifier',
+                value: '25',
+                modifier: '25',
+                memberID: '',
+                date: '',
+                clinician: '',
+                isValid: false,
+                remarks: 'Modifier 25 REQUIRED but MISSING (main procedure code with amount > 0 AND other activities with amount > 0)',
+                eligibility: null
+            });
+        }
+    }
+    
+    return missingRecords;
+}
+
 // Check if modifier 25 is required for the given record
-function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap) {
+function checkModifier25Requirement(record, claimActivitiesMap) {
     // Main procedure codes that require modifier 25 validation
     const MAIN_PROCEDURE_CODES = new Set([
         '99202', '99203', '99212', '99213',
@@ -136,43 +208,33 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
     
     if (!hasMainProcedure) {
         // No main procedure code found, modifier 25 is not required
-        // But if it's present anyway, that's acceptable (no validation error)
-        return { valid: true };
+        // If modifier 25 is present anyway, that's an error (shouldn't be there)
+        return { 
+            valid: false, 
+            message: 'Modifier 25 present but not required (no main procedure codes with amount > 0)' 
+        };
     }
     
-    // If no modifier codes map provided, we can't validate the requirement
-    // Accept modifier 25 as valid since we can't determine if it's truly needed
-    if (!modifierCodesMap || !modifierCodesMap['25']) {
-        return { valid: true };
-    }
-    
-    // Get the list of codes that require modifier 25 and convert to Set for O(1) lookup
-    const modifier25Codes = new Set(modifierCodesMap['25'] || []);
-    
-    // If the config is empty (no codes specified), accept modifier 25 as valid
-    if (modifier25Codes.size === 0) {
-        return { valid: true };
-    }
-    
-    // Check if any activity has a code that's in the modifier 25 list AND has amount > 0
-    let hasModifier25Activity = false;
+    // Check if OTHER activities (non-main procedure codes) have amount > 0
+    let hasOtherActivities = false;
     for (const activity of claimActivities) {
-        if (modifier25Codes.has(activity.code) && activity.amount > 0) {
-            hasModifier25Activity = true;
+        // Skip main procedure codes - we're looking for OTHER activities
+        if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
+            hasOtherActivities = true;
             break;
         }
     }
     
-    if (!hasModifier25Activity) {
-        // Modifier 25 is present but not required (no qualifying activity codes found)
-        // According to the requirements, modifier 25 should only be present when both conditions are met
+    if (!hasOtherActivities) {
+        // Main procedure exists but no other activities with amount > 0
+        // Modifier 25 is NOT required and should NOT be present
         return { 
             valid: false, 
-            message: 'Modifier 25 present but not required (no qualifying activity codes with amount > 0)' 
+            message: 'Modifier 25 present but not required (no other activities with amount > 0)' 
         };
     }
     
-    // Both conditions met: main procedure with amount > 0 AND modifier 25 activity with amount > 0
+    // Both conditions met: main procedure with amount > 0 AND other activities with amount > 0
     // Modifier 25 is correctly applied
     return { valid: true };
 }
