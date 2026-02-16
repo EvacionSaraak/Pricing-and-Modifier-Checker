@@ -57,7 +57,6 @@ function toggleStatusFilter(status) {
 async function runModifierCheck() {
     const xmlFile = document.getElementById('modifierXmlFile').files[0];
     const excelFile = document.getElementById('modifierExcelFile').files[0];
-    const modifierCodesFile = document.getElementById('modifierCodesFile').files[0];
     
     console.log('START');
     
@@ -119,23 +118,9 @@ async function runModifierCheck() {
             return;
         }
         
-        // Read modifier codes file if provided
-        let modifierCodesMap = null;
-        if (modifierCodesFile) {
-            console.log('8.MOD');
-            try {
-                const modifierCodesContent = await readFileAsBinary(modifierCodesFile);
-                modifierCodesMap = parseModifierCodesExcel(modifierCodesContent);
-                console.log('9.MOD-OK');
-            } catch (error) {
-                console.warn('ERR:MOD', error.message);
-                showModifierStatus(`Warning: Could not parse modifier codes file. Continuing without it. Error: ${error.message}`, 'warning');
-            }
-        }
-        
-        // Validate records
+        // Validate records (using default modifier 25 codes list)
         console.log('10.VAL');
-        modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
+        modifierValidationResults = validateModifiers(xmlRecords, eligibilityData, allActivities);
         console.log('11.VAL', modifierValidationResults.length);
         
         if (modifierValidationResults.length === 0) {

@@ -25,14 +25,14 @@ const DEFAULT_MODIFIER_25_CODES = [
     '69210', // User's specific code
 ];
 
-function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap) {
+function validateModifiers(xmlRecords, eligibilityData, allActivities) {
     const validatedRecords = [];
     
     // Build a map of claim activities for modifier 25 checking
     const claimActivitiesMap = buildClaimActivitiesMap(allActivities || []);
     
     // Check for missing modifier 25 requirements
-    const missingModifier25 = checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap);
+    const missingModifier25 = checkForMissingModifier25(claimActivitiesMap, xmlRecords);
     
     for (let record of xmlRecords) {
         // Build matching key
@@ -105,7 +105,7 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
             validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
         } else if (record.modifier === '25') {
             // Modifier 25 validation - check if it's properly applied
-            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap);
+            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap);
             if (!modifier25Check.valid) {
                 validationResult.isValid = false;
                 validationResult.remarks.push(modifier25Check.message);
@@ -150,7 +150,7 @@ function buildClaimActivitiesMap(allActivities) {
 }
 
 // Check for claims that are MISSING modifier 25 when they should have it
-function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodesMap) {
+function checkForMissingModifier25(claimActivitiesMap, xmlRecords) {
     const MAIN_PROCEDURE_CODES = new Set([
         '99202', '99203', '99212', '99213',
         '92002', '92004', '92012', '92014'
@@ -158,15 +158,8 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
     
     const missingRecords = [];
     
-    // Determine which codes to check for modifier 25 requirement
-    let codesToCheck;
-    if (modifierCodesMap && modifierCodesMap['25'] && modifierCodesMap['25'].length > 0) {
-        // Use codes from Modifiers.xlsx if provided
-        codesToCheck = new Set(modifierCodesMap['25']);
-    } else {
-        // Use default list if no Modifiers.xlsx provided
-        codesToCheck = new Set(DEFAULT_MODIFIER_25_CODES);
-    }
+    // Use default modifier 25 codes list
+    const codesToCheck = new Set(DEFAULT_MODIFIER_25_CODES);
     
     // Build a set of claimIDs that already have modifier 25
     const claimsWithModifier25 = new Set();
@@ -235,7 +228,7 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
 }
 
 // Check if modifier 25 is required for the given record
-function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap) {
+function checkModifier25Requirement(record, claimActivitiesMap) {
     // Main procedure codes that require modifier 25 validation
     const MAIN_PROCEDURE_CODES = new Set([
         '99202', '99203', '99212', '99213',
@@ -263,15 +256,8 @@ function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap
         };
     }
     
-    // Determine which codes to check for modifier 25 requirement
-    let codesToCheck;
-    if (modifierCodesMap && modifierCodesMap['25'] && modifierCodesMap['25'].length > 0) {
-        // Use codes from Modifiers.xlsx if provided
-        codesToCheck = new Set(modifierCodesMap['25']);
-    } else {
-        // Use default list if no Modifiers.xlsx provided
-        codesToCheck = new Set(DEFAULT_MODIFIER_25_CODES);
-    }
+    // Use default modifier 25 codes list
+    const codesToCheck = new Set(DEFAULT_MODIFIER_25_CODES);
     
     // Check if OTHER activities that are in the codes to check list have amount > 0
     let hasOtherActivitiesRequiringModifier25 = false;
