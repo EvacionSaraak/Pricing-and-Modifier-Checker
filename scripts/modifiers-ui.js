@@ -2,7 +2,7 @@
 // UI handling for CPT Modifiers Validation Checker
 
 // Script version for cache debugging
-const SCRIPT_VERSION = '2.1.1';
+const SCRIPT_VERSION = '2.1.2';
 console.log(`🔧 Modifiers UI Script Loaded - Version ${SCRIPT_VERSION} - ${new Date().toISOString()}`);
 
 // Debug logging flag - set to true to enable detailed console logging
@@ -88,6 +88,10 @@ async function runModifierCheck() {
             console.log('XML content length:', xmlContent.length);
             console.log('First 500 chars:', xmlContent.substring(0, 500));
         }
+        
+        // IMMEDIATE TEST - This should show if console is working
+        console.log('🟢 TEST: Code reached line 91');
+        console.log('🟢 TEST: About to log STEP 1');
         
         // BREADCRUMB 1: About to parse modifier XML
         console.log('\n→ STEP 1: About to parse XML for modifier records');
