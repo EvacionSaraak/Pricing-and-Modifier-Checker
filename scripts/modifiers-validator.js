@@ -29,7 +29,7 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
             validationResult.remarks.push(`Code is "${record.code}", expected "CPT modifier"`);
         }
         
-        // Check 2: Eligibility match must exist (do this first to get VOI)
+        // Check 2: Eligibility match (required for all modifiers except 50)
         const eligibilityMatches = eligibilityData.index[key];
         let eligibilityMatch = null;
         
@@ -44,12 +44,16 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
             }
         }
         
-        if (!eligibilityMatch) {
+        // Modifier 50 (bilateral procedure) doesn't require eligibility match
+        if (!eligibilityMatch && record.modifier !== '50') {
             validationResult.isValid = false;
             validationResult.remarks.push('No eligibility match found');
             validationResult.eligibility = null;
-        } else {
+        } else if (eligibilityMatch) {
             validationResult.eligibility = eligibilityMatch;
+        } else {
+            // Modifier 50 without eligibility match
+            validationResult.eligibility = null;
         }
         
         // Check 3: Modifier VOI compatibility
@@ -65,6 +69,9 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
         if (record.modifier === '24' && voiNorm !== 'VOID' && voiNorm !== '24') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 24 does not match VOI (expected VOI_D)`);
+        } else if (record.modifier === '50' && voiNorm !== '50' && voiNorm !== 'VOI50') {
+            validationResult.isValid = false;
+            validationResult.remarks.push(`Modifier 50 does not match VOI (expected 50 or VOI_50)`);
         } else if (record.modifier === '52' && voiNorm !== 'VOIEF1' && voiNorm !== '52') {
             validationResult.isValid = false;
             validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
