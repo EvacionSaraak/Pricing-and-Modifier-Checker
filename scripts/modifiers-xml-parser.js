@@ -139,6 +139,8 @@ function parseModifierXML(xmlContent) {
                     modifier = '52';
                 } else if (voiNorm === '25' || voiNorm === 'VOI25') {
                     modifier = '25';
+                } else if (voiNorm === '50' || voiNorm === 'VOI50') {
+                    modifier = '50';
                 } else {
                     if (DEBUG_MODIFIER_PARSING) {
                         console.log(`          ❌ Skipped: Invalid modifier value "${voiNorm}"`);
