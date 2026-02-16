@@ -114,7 +114,7 @@ async function runModifierCheck() {
         }
         
         if (modifierValidationResults.length === 0) {
-            showModifierStatus(`No records matched the filter criteria (PayerID A001 or E001). Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
+            showModifierStatus(`No records found after validation. Total claims parsed: ${xmlRecords.length}, Total eligibilities: ${eligibilityCount}`, 'warning');
             return;
         }
         

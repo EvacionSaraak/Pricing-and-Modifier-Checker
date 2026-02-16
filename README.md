@@ -18,7 +18,6 @@ A web-based application for validating medical claims pricing and CPT modifiers 
   - Code must equal "CPT modifier"
   - Modifier-VOI compatibility (24→VOI_D, 52→VOI_EF1)
   - Eligibility record must exist
-- **PayerID Filtering**: Process only A001 and E001 payers
 - **Color-Coded Results**: Green rows for valid, red rows for invalid
 - **Eligibility Details Modal**: View detailed matching information
 - **Excel Export**: Download validation results
@@ -66,7 +65,6 @@ A web-based application for validating medical claims pricing and CPT modifiers 
      - Build eligibility index from Excel
      - Match using key: `MemberID|Date|Clinician`
      - Validate all records
-     - Filter by PayerID (A001, E001)
      - Check modifier 25 requirements if configured
 
 3. **View Results**:
@@ -209,8 +207,6 @@ The CPT Modifiers Validation Checker performs the following checks:
    - Member ID (normalized, leading zeros removed)
    - Date (YYYY-MM-DD format)
    - Clinician name
-   
-**Filter**: Only processes records with PayerID "A001" or "E001"
 
 ### Modifier 25 Validation
 

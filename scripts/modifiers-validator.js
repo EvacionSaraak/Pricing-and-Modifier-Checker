@@ -8,11 +8,6 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
     const claimActivitiesMap = buildClaimActivitiesMap(allActivities || []);
     
     for (let record of xmlRecords) {
-        // Filter: Keep only PayerID "A001" or "E001"
-        if (record.payerID !== 'A001' && record.payerID !== 'E001') {
-            continue;
-        }
-        
         // Build matching key
         const normalizedMemberID = normalizeMemberID(record.memberID);
         const normalizedDate = normalizeDate(record.date);
