@@ -81,7 +81,7 @@ function validateModifiers(xmlRecords, eligibilityData, allActivities, modifierC
             validationResult.remarks.push(`Modifier 52 does not match VOI (expected VOI_EF1)`);
         } else if (record.modifier === '25') {
             // Modifier 25 validation - check if it's properly applied
-            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap);
+            const modifier25Check = checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap);
             if (!modifier25Check.valid) {
                 validationResult.isValid = false;
                 validationResult.remarks.push(modifier25Check.message);
@@ -211,7 +211,7 @@ function checkForMissingModifier25(claimActivitiesMap, xmlRecords, modifierCodes
 }
 
 // Check if modifier 25 is required for the given record
-function checkModifier25Requirement(record, claimActivitiesMap) {
+function checkModifier25Requirement(record, claimActivitiesMap, modifierCodesMap) {
     // Main procedure codes that require modifier 25 validation
     const MAIN_PROCEDURE_CODES = new Set([
         '99202', '99203', '99212', '99213',
@@ -239,18 +239,30 @@ function checkModifier25Requirement(record, claimActivitiesMap) {
         };
     }
     
-    // Check if OTHER activities (non-main procedure codes) have amount > 0
-    let hasOtherActivities = false;
+    // Build a Set of codes that require modifier 25 from the Modifiers.xlsx file
+    // If no modifierCodesMap provided, we'll accept modifier 25 as valid (backward compatible)
+    let modifier25RequiredCodes = new Set();
+    if (modifierCodesMap && modifierCodesMap['25']) {
+        modifier25RequiredCodes = new Set(modifierCodesMap['25']);
+    }
+    
+    // Check if OTHER activities that are in the modifier 25 list have amount > 0
+    // If no Modifiers.xlsx file, check for ANY other activities (backward compatible)
+    let hasOtherActivitiesRequiringModifier25 = false;
     for (const activity of claimActivities) {
         // Skip main procedure codes - we're looking for OTHER activities
         if (!MAIN_PROCEDURE_CODES.has(activity.code) && activity.amount > 0) {
-            hasOtherActivities = true;
-            break;
+            // If we have a modifier codes map, check if this code is in the list
+            // If no map, accept any other activity
+            if (modifier25RequiredCodes.size === 0 || modifier25RequiredCodes.has(activity.code)) {
+                hasOtherActivitiesRequiringModifier25 = true;
+                break;
+            }
         }
     }
     
-    if (!hasOtherActivities) {
-        // Main procedure exists but no other activities with amount > 0
+    if (!hasOtherActivitiesRequiringModifier25) {
+        // Main procedure exists but no other activities requiring modifier 25
         // Modifier 25 is NOT required and should NOT be present
         return { 
             valid: false, 
@@ -258,7 +270,7 @@ function checkModifier25Requirement(record, claimActivitiesMap) {
         };
     }
     
-    // Both conditions met: main procedure with amount > 0 AND other activities with amount > 0
+    // Both conditions met: main procedure with amount > 0 AND other activities requiring modifier 25
     // Modifier 25 is correctly applied
     return { valid: true };
 }

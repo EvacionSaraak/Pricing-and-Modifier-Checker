@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Modifier 25 Validation Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test h3 { margin-top: 0; }
+        .pass { background-color: #d4edda; border-color: #c3e6cb; }
+        .fail { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background-color: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test: Modifier 25 Validation Fix</h1>
+    <p>Testing that modifier 25 validation uses Modifiers.xlsx consistently.</p>
+    
+    <div id="results"></div>
+
+    <script src="scripts/modifiers-xml-parser.js"></script>
+    <script src="scripts/modifiers-code-parser.js"></script>
+    <script src="scripts/modifiers-excel-parser.js"></script>
+    <script src="scripts/modifiers-validator.js"></script>
+    
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        // Test data: Modifiers.xlsx codes
+        const modifierCodesMap = {
+            '25': ['10040', '10060', '11042'],
+            '50': ['10080']
+        };
+        
+        // Test data: Eligibility (simple eligibility for matching)
+        const eligibilityData = {
+            records: [
+                { memberID: 'M001', date: '2024-01-15', clinician: 'DR. SMITH', voiNumber: 'VOI_25', used: false },
+                { memberID: 'M002', date: '2024-01-15', clinician: 'DR. JONES', voiNumber: 'VOI_25', used: false },
+            ],
+            index: {}
+        };
+        // Build index
+        for (const elig of eligibilityData.records) {
+            const normalizedMemberID = elig.memberID.replace(/[^0-9]/g, '');
+            const normalizedDate = elig.date;
+            const key = `${normalizedMemberID}|${normalizedDate}|${elig.clinician}`;
+            if (!eligibilityData.index[key]) {
+                eligibilityData.index[key] = [];
+            }
+            eligibilityData.index[key].push(elig);
+        }
+        
+        // Test 1: Modifier 25 required and present (code 10040 IS in Modifiers.xlsx)
+        function test1() {
+            const xmlRecords = [{
+                claimID: 'CLAIM-001',
+                activityID: 'ACT-001',
+                payerID: 'E001',
+                memberID: 'M001',
+                date: '2024-01-15',
+                clinician: 'DR. SMITH',
+                code: 'CPT modifier',
+                value: 'VOI_25',
+                modifier: '25'
+            }];
+            
+            const allActivities = [
+                { claimID: 'CLAIM-001', activityID: 'ACT-001', code: '99203', amount: 150 },
+                { claimID: 'CLAIM-001', activityID: 'ACT-002', code: '10040', amount: 75 }
+            ];
+            
+            const results = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
+            const result = results[0];
+            
+            const passed = result.isValid === true;
+            displayTest(
+                'Test 1: Modifier 25 Required and Present (Code in Modifiers.xlsx)',
+                `Claim has 99203 (main procedure) + code 10040 (in Modifiers.xlsx) + modifier 25 present.
+                Expected: VALID
+                Actual: ${result.isValid === true ? 'VALID' : result.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID'}
+                Remarks: ${result.remarks || 'Valid'}`,
+                passed,
+                result
+            );
+        }
+        
+        // Test 2: Modifier 25 NOT required (code 99999 NOT in Modifiers.xlsx)
+        function test2() {
+            const xmlRecords = [{
+                claimID: 'CLAIM-002',
+                activityID: 'ACT-003',
+                payerID: 'E001',
+                memberID: 'M002',
+                date: '2024-01-15',
+                clinician: 'DR. JONES',
+                code: 'CPT modifier',
+                value: 'VOI_25',
+                modifier: '25'
+            }];
+            
+            const allActivities = [
+                { claimID: 'CLAIM-002', activityID: 'ACT-003', code: '99203', amount: 150 },
+                { claimID: 'CLAIM-002', activityID: 'ACT-004', code: '99999', amount: 75 } // NOT in Modifiers.xlsx
+            ];
+            
+            const results = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
+            const result = results[0];
+            
+            const passed = result.isValid === false && result.remarks.includes('not required');
+            displayTest(
+                'Test 2: Modifier 25 NOT Required (Code NOT in Modifiers.xlsx)',
+                `Claim has 99203 + code 99999 (NOT in Modifiers.xlsx) + modifier 25 present.
+                Expected: INVALID with "not required" message
+                Actual: ${result.isValid === true ? 'VALID' : result.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID'}
+                Remarks: ${result.remarks || 'Valid'}`,
+                passed,
+                result
+            );
+        }
+        
+        // Test 3: Modifier 25 required but missing
+        function test3() {
+            const xmlRecords = []; // No modifier 25 observation
+            
+            const allActivities = [
+                { claimID: 'CLAIM-003', activityID: 'ACT-005', payerID: 'E001', code: '99203', amount: 150 },
+                { claimID: 'CLAIM-003', activityID: 'ACT-006', payerID: 'E001', code: '10040', amount: 75 }
+            ];
+            
+            const results = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
+            
+            // Should have created a "missing" record
+            const missingRecord = results.find(r => r.claimID === 'CLAIM-003' && r.modifier === '25');
+            const passed = missingRecord && missingRecord.isValid === false && missingRecord.remarks.includes('required but missing');
+            
+            displayTest(
+                'Test 3: Modifier 25 Required but Missing',
+                `Claim has 99203 + code 10040 (in Modifiers.xlsx) but NO modifier 25 observation.
+                Expected: INVALID with "required but missing" message
+                Actual: ${missingRecord ? 'Record created - ' + (missingRecord.isValid === false ? 'INVALID' : 'VALID') : 'No record created'}
+                Remarks: ${missingRecord ? missingRecord.remarks : 'N/A'}`,
+                passed,
+                missingRecord || {}
+            );
+        }
+        
+        // Test 4: No Modifiers.xlsx file (backward compatibility)
+        function test4() {
+            const xmlRecords = [{
+                claimID: 'CLAIM-004',
+                activityID: 'ACT-007',
+                payerID: 'E001',
+                memberID: 'M001',
+                date: '2024-01-15',
+                clinician: 'DR. SMITH',
+                code: 'CPT modifier',
+                value: 'VOI_25',
+                modifier: '25'
+            }];
+            
+            const allActivities = [
+                { claimID: 'CLAIM-004', activityID: 'ACT-007', code: '99203', amount: 150 },
+                { claimID: 'CLAIM-004', activityID: 'ACT-008', code: '10040', amount: 75 }
+            ];
+            
+            // No modifierCodesMap provided (null)
+            const results = validateModifiers(xmlRecords, eligibilityData, allActivities, null);
+            const result = results[0];
+            
+            // When no Modifiers.xlsx, should accept any other activity (backward compatible)
+            const passed = result.isValid === true;
+            displayTest(
+                'Test 4: No Modifiers.xlsx File (Backward Compatibility)',
+                `Modifier 25 present but no Modifiers.xlsx uploaded.
+                Expected: VALID (backward compatible - accepts as valid)
+                Actual: ${result.isValid === true ? 'VALID' : result.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID'}
+                Remarks: ${result.remarks || 'Valid'}`,
+                passed,
+                result
+            );
+        }
+        
+        // Test 5: Multiple codes from Modifiers.xlsx
+        function test5() {
+            const xmlRecords = [{
+                claimID: 'CLAIM-005',
+                activityID: 'ACT-009',
+                payerID: 'E001',
+                memberID: 'M001',
+                date: '2024-01-15',
+                clinician: 'DR. SMITH',
+                code: 'CPT modifier',
+                value: 'VOI_25',
+                modifier: '25'
+            }];
+            
+            const allActivities = [
+                { claimID: 'CLAIM-005', activityID: 'ACT-009', code: '99203', amount: 150 },
+                { claimID: 'CLAIM-005', activityID: 'ACT-010', code: '10040', amount: 50 }, // in list
+                { claimID: 'CLAIM-005', activityID: 'ACT-011', code: '10060', amount: 75 }  // in list
+            ];
+            
+            const results = validateModifiers(xmlRecords, eligibilityData, allActivities, modifierCodesMap);
+            const result = results[0];
+            
+            const passed = result.isValid === true;
+            displayTest(
+                'Test 5: Multiple Codes from Modifiers.xlsx',
+                `Claim has 99203 + multiple codes from Modifiers.xlsx (10040, 10060) + modifier 25 present.
+                Expected: VALID
+                Actual: ${result.isValid === true ? 'VALID' : result.isValid === 'unknown' ? 'UNKNOWN' : 'INVALID'}
+                Remarks: ${result.remarks || 'Valid'}`,
+                passed,
+                result
+            );
+        }
+        
+        function displayTest(title, description, passed, result) {
+            const div = document.createElement('div');
+            div.className = 'test ' + (passed ? 'pass' : 'fail');
+            div.innerHTML = `
+                <h3>${passed ? '✅' : '❌'} ${title}</h3>
+                <p>${description.replace(/\n/g, '<br>')}</p>
+                <details>
+                    <summary>View Full Result Object</summary>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                </details>
+            `;
+            resultsDiv.appendChild(div);
+        }
+        
+        // Run all tests
+        console.log('Running Modifier 25 validation fix tests...');
+        test1();
+        test2();
+        test3();
+        test4();
+        test5();
+        console.log('All tests complete!');
+    </script>
+</body>
+</html>
